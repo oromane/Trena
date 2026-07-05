@@ -1,0 +1,68 @@
+{
+  "name": "ATS - Ajustement quotidien 06:00",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 6 * * *" }]
+        }
+      },
+      "name": "Cron 06:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "http://performance-engine:8000/users/active",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Internal-Key", "value": "={{ $env.INTERNAL_API_KEY }}" }
+          ]
+        }
+      },
+      "name": "Utilisateurs actifs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "user_ids",
+        "options": {}
+      },
+      "name": "Split par utilisateur",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://performance-engine:8000/daily-adjust/run",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Internal-Key", "value": "={{ $env.INTERNAL_API_KEY }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"user_id\": \"{{ $json.user_ids }}\", \"sync_calendar\": true }",
+        "options": {}
+      },
+      "name": "Ajustement quotidien",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 0]
+    }
+  ],
+  "connections": {
+    "Cron 06:00": { "main": [[{ "node": "Utilisateurs actifs", "type": "main", "index": 0 }]] },
+    "Utilisateurs actifs": { "main": [[{ "node": "Split par utilisateur", "type": "main", "index": 0 }]] },
+    "Split par utilisateur": { "main": [[{ "node": "Ajustement quotidien", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

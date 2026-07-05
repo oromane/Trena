@@ -1,0 +1,60 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - PERFORMANCE_ENGINE_URL=http://performance-engine:8000
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - SITE_URL=${SITE_URL:-http://localhost:3000}
+    restart: always
+    networks:
+      - app-network
+    depends_on:
+      - performance-engine
+
+  performance-engine:
+    build:
+      context: ./backend-python
+      dockerfile: Dockerfile
+    # Pas de ports: exposés — joignable uniquement via le réseau interne
+    environment:
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - TOKEN_ENCRYPTION_KEY=${TOKEN_ENCRYPTION_KEY}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+    restart: always
+    networks:
+      - app-network
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=${N8N_HOST}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=https://${N8N_HOST}/
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    restart: always
+    networks:
+      - app-network
+
+volumes:
+  n8n_data:
+
+networks:
+  app-network:
+    driver: bridge

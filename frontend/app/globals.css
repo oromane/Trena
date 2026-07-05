@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  ::selection {
+    background: rgba(0, 230, 118, 0.25);
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0b1023;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 6px;
+  }
+}
+
+@layer utilities {
+  .card {
+    @apply rounded-2xl border border-white/5 bg-ats-card;
+  }
+  .card-2 {
+    @apply rounded-xl border border-white/5 bg-ats-card2;
+  }
+  .metric {
+    @apply font-mono tabular-nums;
+  }
+}
