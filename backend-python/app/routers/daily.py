@@ -94,7 +94,7 @@ def run_daily_adjust(req: DailyRunRequest,
             duration_minutes=session["duration_planned_minutes"],
             target_trimp=session["intensity_target_trimp"],
             calendar_synced=False,
-            detail="Données HRV insuffisantes — planning maintenu",
+            detail="Données HRV insuffisantes : planning maintenu",
         )
 
     readiness, z = hrv.assess_readiness(

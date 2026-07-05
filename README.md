@@ -1,4 +1,4 @@
-# Adaptive Training System
+# Trena
 
 Plan d'entraînement d'endurance individualisé, ajusté chaque matin selon les données physiologiques (HRV, sommeil, FC repos) et synchronisé avec Google Calendar. Spécification complète : voir `Claude.md`.
 
@@ -80,6 +80,6 @@ Routes internes (en-tête `X-Internal-Key` requis) : `POST /ingest/daily-metrics
 
 ## État d'avancement
 
-Fait : moteur complet (Banister, TRIMP, HRV, périodisation), API interne sécurisée, persistance Supabase, cockpit de performance (probabilité de réussite, trajectoire projetée, insights), workflow n8n, module Google Calendar complet (OAuth, publish, patch matinal), sync Garmin Connect automatique (HRV/sommeil/FC repos/stress, jeton chiffré, auto-sync avant l'ajustement quotidien), chiffrement des tokens.
+Fait : moteur complet (Banister, TRIMP, HRV, périodisation, séances/semaine paramétrable), API interne sécurisée, persistance Supabase, cockpit de performance (probabilité, trajectoire projetée, insights, déroulé de séance), édition des séances (déplacer jour + heure, ajouter, supprimer, sync calendrier), Google Calendar complet (OAuth, publish, purge des doublons, patch matinal), sync Garmin Connect automatique (MFA 2 étapes, jeton chiffré), page Profil (nom, email, mot de passe, export JSON), thème clair/sombre, workflow n8n.
 
 Reste : calibration individuelle de tau1/tau2 par régression sur l'historique, import des activités réalisées (TRIMP auto depuis Garmin), déploiement VPS.

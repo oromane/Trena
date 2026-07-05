@@ -15,6 +15,28 @@ const STATE: Record<string, { label: string; sub: string; color: string }> = {
   REDUCE: { label: 'Récupération', sub: 'Protège ton objectif', color: '#EF4444' },
 };
 
+/** Ligne ECG animée : le pouls de Trena. */
+function PulseLine({ color }: { color: string }) {
+  return (
+    <svg
+      viewBox="0 0 640 40"
+      preserveAspectRatio="none"
+      className="h-8 w-full opacity-60"
+      aria-hidden
+    >
+      <path
+        className="ecg-path"
+        d="M0 20 H180 L200 20 L210 6 L222 34 L232 12 L240 20 H330 L350 20 L360 8 L372 32 L382 14 L390 20 H520 L540 20 L550 4 L562 36 L572 10 L580 20 H640"
+        fill="none"
+        stroke={color}
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export default function Hero({
   name,
   objectiveTitle,
@@ -91,7 +113,7 @@ export default function Hero({
             </motion.div>
           ) : (
             <p className="mt-5 text-ats-muted">
-              Aucun objectif actif — définis-en un pour activer le cockpit.
+              Aucun objectif actif : définis-en un pour activer le cockpit.
             </p>
           )}
 
@@ -109,7 +131,7 @@ export default function Hero({
               <span className="font-semibold" style={{ color: state.color }}>
                 {state.label}
               </span>
-              <span className="text-ats-muted"> — {state.sub}</span>
+              <span className="text-ats-muted"> · {state.sub}</span>
             </div>
           </motion.div>
           <p className="mt-3 max-w-md text-xs leading-relaxed text-ats-muted">
@@ -147,6 +169,11 @@ export default function Hero({
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Le pouls de Trena */}
+      <div className="mx-auto max-w-6xl px-6 pb-2">
+        <PulseLine color={state.color} />
       </div>
     </section>
   );

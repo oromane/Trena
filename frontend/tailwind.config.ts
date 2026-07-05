@@ -1,24 +1,27 @@
 import type { Config } from 'tailwindcss';
 
+// Couleurs pilotées par variables CSS (globals.css) : permet le thème clair.
+const v = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
+
 const config: Config = {
   content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
         ats: {
-          bg: '#050816',
-          bg2: '#0B1023',
-          card: '#12192C',
-          card2: '#1A2238',
-          text: '#F8FAFC',
-          muted: '#94A3B8',
-          green: '#00E676',
-          greendark: '#00C853',
-          blue: '#3B82F6',
-          orange: '#F59E0B',
-          red: '#EF4444',
-          violet: '#8B5CF6',
-          gray: '#334155',
+          bg: v('ats-bg'),
+          bg2: v('ats-bg2'),
+          card: v('ats-card'),
+          card2: v('ats-card2'),
+          text: v('ats-text'),
+          muted: v('ats-muted'),
+          green: v('ats-green'),
+          greendark: v('ats-greendark'),
+          blue: v('ats-blue'),
+          orange: v('ats-orange'),
+          red: v('ats-red'),
+          violet: v('ats-violet'),
+          gray: v('ats-gray'),
         },
       },
       fontFamily: {

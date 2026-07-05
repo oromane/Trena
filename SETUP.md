@@ -6,6 +6,8 @@ Suis ces étapes dans l'ordre. Durée totale : ~20 minutes.
 
 1. Va sur https://supabase.com → **New project** (choisis une région UE).
 2. Une fois le projet créé : **SQL Editor** → colle le contenu de `sql/schema.sql` → **Run**.
+   Si ta base existait déjà avant la v0.4 : exécute aussi `sql/migration-002.sql`
+   (nom affiché, séances/semaine, heure de séance).
 3. **Project Settings → API** : copie ces 3 valeurs dans ton `.env` :
    `Project URL` → `SUPABASE_URL`, `anon public` → `SUPABASE_ANON_KEY`, `service_role` → `SUPABASE_SERVICE_ROLE_KEY`.
 4. **Authentication → Providers → Email** : activé par défaut. Pour tester sans email de confirmation : **Authentication → Settings** → désactive "Confirm email" (à réactiver en production).

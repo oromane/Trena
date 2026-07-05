@@ -22,7 +22,7 @@ const DEFS: Def[] = [
     unit: 'ms',
     icon: Activity,
     higherIsBetter: true,
-    explain: 'Variabilité cardiaque au réveil — ton signal de récupération n°1.',
+    explain: 'Variabilité cardiaque au réveil : ton signal de récupération n°1.',
     impact: 'Pilote la décision quotidienne : intensité maintenue ou réduite.',
   },
   {
@@ -41,7 +41,7 @@ const DEFS: Def[] = [
     unit: 'bpm',
     icon: HeartPulse,
     higherIsBetter: false,
-    explain: 'Fréquence cardiaque au repos — monte avec fatigue ou maladie.',
+    explain: 'Fréquence cardiaque au repos : monte avec fatigue ou maladie.',
     impact: 'Tendance haussière = signal précoce de surcharge.',
   },
   {
@@ -73,7 +73,7 @@ export default function PhysioGrid({ physio }: { physio: DashboardSummary['physi
   if (available.length === 0) {
     return (
       <div className="card p-6 text-sm text-ats-muted">
-        Aucune donnée physiologique — saisis tes premières métriques (HRV, sommeil)
+        Aucune donnée physiologique : saisis tes premières métriques (HRV, sommeil)
         pour activer l&apos;analyse quotidienne.
       </div>
     );

@@ -66,6 +66,7 @@ def _distribute_week(
     weekly_trimp: float,
     availability_mask: list[int],
     last_day: date,
+    sessions_per_week: int | None = None,
 ) -> list[PlannedDay]:
     """Répartit la charge hebdomadaire sur les jours disponibles."""
     days = [
@@ -76,6 +77,12 @@ def _distribute_week(
     ]
     if not days:
         return []
+
+    # Limite du nombre de séances hebdomadaires : on garde les jours
+    # les plus disponibles.
+    if sessions_per_week is not None and len(days) > sessions_per_week:
+        days = sorted(days, key=lambda d: d[1], reverse=True)[:sessions_per_week]
+        days.sort(key=lambda d: d[0])
 
     # Jours triés par disponibilité décroissante : les clés d'abord
     by_capacity = sorted(days, key=lambda d: d[1], reverse=True)
@@ -130,6 +137,7 @@ def generate_plan(
     availability_mask: list[int],
     weekly_trimp_start: float = 300.0,
     ramp_rate: float = 0.05,
+    sessions_per_week: int | None = None,
 ) -> list[PlannedDay]:
     """Génère le plan complet entre start_date et la veille de l'objectif."""
     if target_date <= start_date:
@@ -146,7 +154,8 @@ def generate_plan(
     plan: list[PlannedDay] = []
     for w, weekly in enumerate(targets):
         week_start = first_monday + timedelta(weeks=w)
-        week_plan = _distribute_week(week_start, weekly, availability_mask, last_day)
+        week_plan = _distribute_week(week_start, weekly, availability_mask,
+                                     last_day, sessions_per_week)
         # Exclure les jours antérieurs à start_date (semaine partielle initiale)
         plan.extend(p for p in week_plan if p.scheduled_date >= start_date)
     return plan

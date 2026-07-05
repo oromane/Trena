@@ -44,7 +44,7 @@ export default function InsightsCard({
         </ul>
       )}
       <p className="mt-5 border-t border-white/5 pt-3 text-[10px] text-ats-gray">
-        Moteur d&apos;analyse déterministe — chaque conclusion est traçable à tes données.
+        Moteur d&apos;analyse déterministe : chaque conclusion est traçable à tes données.
       </p>
     </div>
   );

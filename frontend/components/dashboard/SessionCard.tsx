@@ -1,9 +1,10 @@
 /**
- * Séance recommandée — LA carte de décision.
- * Répond à : quoi, pourquoi, pourquoi aujourd'hui, quel gain, quel risque si ignorée.
+ * Séance recommandée : LA carte de décision.
+ * Quoi, comment (blocs d'exécution), pourquoi, quel gain, quel risque si ignorée.
  */
-import { ArrowRight, Flame, Timer } from 'lucide-react';
+import { ArrowRight, Flame, ListChecks, Timer } from 'lucide-react';
 import type { DashboardSummary } from '@/lib/engine';
+import { fmtDuration } from '@/lib/format';
 import { runDailyAdjust } from '@/app/actions';
 
 const TYPE_META: Record<string, { label: string; color: string; goal: string }> = {
@@ -15,7 +16,7 @@ const TYPE_META: Record<string, { label: string; color: string; goal: string }> 
   TEMPO: {
     label: 'Tempo / Seuil',
     color: '#8B5CF6',
-    goal: 'Repousser le seuil lactique — tenir une allure élevée plus longtemps.',
+    goal: 'Repousser le seuil lactique pour tenir une allure élevée plus longtemps.',
   },
   ENDURANCE: {
     label: 'Endurance fondamentale',
@@ -31,10 +32,12 @@ const TYPE_META: Record<string, { label: string; color: string; goal: string }> 
 
 export default function SessionCard({
   session,
+  workout,
   readiness,
   gainPct,
 }: {
   session: DashboardSummary['today_session'];
+  workout: DashboardSummary['workout'];
   readiness: DashboardSummary['readiness'];
   gainPct: number;
 }) {
@@ -43,7 +46,7 @@ export default function SessionCard({
       <div className="card flex h-full flex-col justify-center p-8 text-center">
         <p className="text-lg font-semibold text-ats-muted">Jour de repos</p>
         <p className="mx-auto mt-2 max-w-xs text-sm text-ats-muted">
-          Aucune séance planifiée — la récupération fait partie du plan.
+          Aucune séance planifiée : la récupération fait partie du plan.
           C&apos;est aujourd&apos;hui que l&apos;adaptation se produit.
         </p>
       </div>
@@ -61,12 +64,12 @@ export default function SessionCard({
     readiness.level === 'REDUCE'
       ? 'Ton HRV est effondré avec une dette de sommeil : maintenir l’intensité prévue aurait dégradé ta récupération pour 3-4 jours. Cette séance protège la trajectoire.'
       : readiness.level === 'CAUTION'
-        ? 'HRV sous ta norme : l’intensité est plafonnée mais le volume conservé — le stimulus aérobie reste acquis sans creuser la fatigue.'
+        ? 'HRV sous ta norme : l’intensité est plafonnée mais le volume conservé. Le stimulus aérobie reste acquis sans creuser la fatigue.'
         : 'Tes signaux physiologiques sont dans ta norme : ton corps peut absorber le stimulus prévu par le bloc en cours.';
 
   const ignored =
     readiness.level === 'NORMAL'
-      ? 'Séance manquée = stimulus perdu : la progression du bloc est décalée et ton adhérence — premier facteur de réussite — baisse.'
+      ? 'Séance manquée = stimulus perdu : la progression du bloc est décalée et ton adhérence, premier facteur de réussite, baisse.'
       : 'Même réduite, cette séance entretient la base aérobie. L’ignorer ralentit le retour à ta norme.';
 
   return (
@@ -81,7 +84,7 @@ export default function SessionCard({
         </span>
         {modified && (
           <span className="rounded-full bg-ats-blue/10 px-2.5 py-1 text-[10px] font-semibold text-ats-blue">
-            Adaptée par le système ce matin
+            Adaptée par Trena ce matin
           </span>
         )}
       </div>
@@ -93,13 +96,51 @@ export default function SessionCard({
       <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
         <span className="inline-flex items-center gap-1.5 text-sm text-ats-text/90">
           <Timer className="h-4 w-4 text-ats-muted" />
-          <span className="metric font-medium">{session.duration_planned_minutes} min</span>
+          <span className="metric font-medium">
+            cible {fmtDuration(session.duration_planned_minutes)}
+          </span>
         </span>
         <span className="inline-flex items-center gap-1.5 text-sm text-ats-text/90">
           <Flame className="h-4 w-4 text-ats-muted" />
           <span className="metric font-medium">TRIMP {session.intensity_target_trimp}</span>
         </span>
+        {session.scheduled_time && (
+          <span className="metric text-sm text-ats-muted">
+            {session.scheduled_time.slice(0, 5).replace(':', 'h')}
+          </span>
+        )}
       </div>
+
+      {/* Déroulé de la séance */}
+      {workout && (
+        <div className="card-2 mt-5 p-4">
+          <div className="flex items-center gap-2 text-ats-muted">
+            <ListChecks className="h-3.5 w-3.5" />
+            <span className="text-[10px] font-medium uppercase tracking-[0.2em]">
+              Déroulé
+            </span>
+          </div>
+          <ol className="mt-3 space-y-2">
+            {workout.blocks.map((b, i) => (
+              <li key={i} className="flex gap-3 text-[13px]">
+                <span
+                  className="metric mt-0.5 shrink-0 text-[11px] font-semibold"
+                  style={{ color: meta.color }}
+                >
+                  {i + 1}
+                </span>
+                <div>
+                  <span className="font-medium text-ats-text/90">{b.label}</span>
+                  <span className="text-ats-muted"> : {b.detail}</span>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <p className="mt-3 border-t border-white/5 pt-2.5 text-[12px] italic leading-relaxed text-ats-muted">
+            {workout.focus}
+          </p>
+        </div>
+      )}
 
       <dl className="mt-5 space-y-3 text-[13px] leading-relaxed">
         <div>

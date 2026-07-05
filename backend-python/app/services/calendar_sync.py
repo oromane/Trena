@@ -119,6 +119,64 @@ class GoogleCalendarClient:
         if r.status_code not in (204, 404, 410):
             r.raise_for_status()
 
+    def list_events(self, access_token: str, params: dict,
+                    calendar_id: str = "primary") -> list[dict]:
+        """Liste paginée des événements correspondant aux paramètres."""
+        items: list[dict] = []
+        page_token: str | None = None
+        while True:
+            p = {**params, "maxResults": 250, "singleEvents": "true"}
+            if page_token:
+                p["pageToken"] = page_token
+            r = self._http.get(
+                f"{CAL_BASE}/calendars/{calendar_id}/events",
+                params=p, headers=self._headers(access_token),
+            )
+            r.raise_for_status()
+            data = r.json()
+            items.extend(data.get("items", []))
+            page_token = data.get("nextPageToken")
+            if not page_token:
+                return items
+
+    def purge_trena_events(self, access_token: str, time_min: str,
+                           time_max: str) -> int:
+        """Supprime tous les événements créés par Trena dans la fenêtre.
+
+        Deux passes : le marqueur extendedProperties (événements récents)
+        et la recherche plein-texte (événements créés avant le marqueur).
+        """
+        window = {"timeMin": time_min, "timeMax": time_max}
+        found: dict[str, dict] = {}
+        for extra in (
+            {"privateExtendedProperty": "trena=1"},
+            {"q": "Adaptive Training System"},
+            {"q": "Trena"},
+        ):
+            try:
+                for ev in self.list_events(access_token, {**window, **extra}):
+                    found[ev["id"]] = ev
+            except httpx.HTTPStatusError:
+                continue
+
+        deleted = 0
+        for ev_id, ev in found.items():
+            marked = (ev.get("extendedProperties", {})
+                      .get("private", {}).get("trena") == "1")
+            text = f"{ev.get('summary', '')} {ev.get('description', '')}"
+            if marked or "Adaptive Training System" in text or "Trena" in text:
+                self.delete_event(access_token, ev_id)
+                deleted += 1
+        return deleted
+
+
+def format_duration(minutes: int) -> str:
+    """105 -> '1h45', 45 -> '45 min'."""
+    if minutes >= 60:
+        h, m = divmod(minutes, 60)
+        return f"{h}h{m:02d}" if m else f"{h}h"
+    return f"{minutes} min"
+
 
 def session_to_event(
     session_type: str,
@@ -127,22 +185,24 @@ def session_to_event(
     day: date,
     start_hour: int = DEFAULT_START_HOUR,
     tz: str = "Europe/Paris",
+    start_time: time | None = None,
 ) -> dict:
     """Convertit une séance en événement Google Calendar."""
-    start_dt = datetime.combine(day, time(hour=start_hour))
+    start_dt = datetime.combine(day, start_time or time(hour=start_hour))
     end_dt = start_dt + timedelta(minutes=duration_minutes)
     label = SESSION_LABELS.get(session_type, session_type)
     return {
-        "summary": f"🏃 {label} — {duration_minutes} min",
+        "summary": f"🏃 {label} · {format_duration(duration_minutes)}",
         "description": (
             f"Type : {label}\n"
-            f"Durée : {duration_minutes} min\n"
+            f"Durée : {format_duration(duration_minutes)}\n"
             f"Charge cible (TRIMP) : {target_trimp}\n"
-            f"Généré par Adaptive Training System"
+            f"Généré par Trena"
         ),
         "start": {"dateTime": start_dt.isoformat(), "timeZone": tz},
         "end": {"dateTime": end_dt.isoformat(), "timeZone": tz},
         "reminders": {"useDefault": True},
+        "extendedProperties": {"private": {"trena": "1"}},
     }
 
 

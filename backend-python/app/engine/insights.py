@@ -50,7 +50,7 @@ def success_probability(
             f"sur 28 jours ({adherence:.0%})."
         )
     else:
-        explanation.append("Pas encore de séances dues — adhérence neutre.")
+        explanation.append("Pas encore de séances dues : adhérence neutre.")
     if form_score >= 0.2:
         explanation.append("Fraîcheur positive : la charge est bien absorbée.")
     elif form_score <= -0.2:
@@ -130,7 +130,7 @@ def generate_insights(
         if ramp > 0.15:
             out.append(Insight("load", "warning",
                 f"Charge prévue cette semaine +{ramp:.0%} vs réalisé la semaine "
-                f"dernière — au-dessus de la progression sûre (~10%)."))
+                f"dernière, au-dessus de la progression sûre (~10%)."))
 
     if readiness == "REDUCE":
         out.append(Insight("readiness", "warning",

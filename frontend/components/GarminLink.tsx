@@ -30,7 +30,7 @@ export default function GarminLink() {
           if (prev <= 1) {
             if (timerRef.current) clearInterval(timerRef.current);
             setStep('error');
-            setError('Délai expiré — recommence la connexion.');
+            setError('Délai expiré : recommence la connexion.');
             return 0;
           }
           return prev - 1;
@@ -258,7 +258,7 @@ export default function GarminLink() {
         Se connecter à Garmin
       </button>
       <p className="text-[11px] leading-relaxed text-ats-gray">
-        Ton mot de passe sert uniquement au login initial — il n&apos;est jamais
+        Ton mot de passe sert uniquement au login initial : il n&apos;est jamais
         stocké. Seul un jeton de session chiffré (AES) est conservé, révocable
         ici à tout moment.
       </p>

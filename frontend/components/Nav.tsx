@@ -1,11 +1,13 @@
 import Link from 'next/link';
 import { signOut } from '@/app/actions';
 import Logo from '@/components/Logo';
+import ThemeToggle from '@/components/ThemeToggle';
 
 const LINKS = [
   { href: '/dashboard', label: 'Cockpit' },
   { href: '/objectives', label: 'Objectifs' },
   { href: '/metrics', label: 'Métriques' },
+  { href: '/profile', label: 'Profil' },
 ];
 
 export default function Nav() {
@@ -26,11 +28,14 @@ export default function Nav() {
             </Link>
           ))}
         </div>
-        <form action={signOut} className="ml-auto">
-          <button className="text-xs text-ats-gray transition-colors hover:text-ats-muted">
-            Déconnexion
-          </button>
-        </form>
+        <div className="ml-auto flex items-center gap-3">
+          <ThemeToggle />
+          <form action={signOut}>
+            <button className="text-xs text-ats-gray transition-colors hover:text-ats-muted">
+              Déconnexion
+            </button>
+          </form>
+        </div>
       </div>
     </nav>
   );

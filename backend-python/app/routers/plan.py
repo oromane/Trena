@@ -57,6 +57,7 @@ def generate(req: PlanRequest, repo: SupabaseRepo = Depends(get_repo)) -> PlanRe
             availability_mask=profile["weekly_availability_mask"],
             weekly_trimp_start=req.weekly_trimp_start,
             ramp_rate=req.ramp_rate,
+            sessions_per_week=profile.get("sessions_per_week"),
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))

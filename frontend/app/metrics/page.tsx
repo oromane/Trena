@@ -1,18 +1,19 @@
 import { RefreshCw, Watch } from 'lucide-react';
 import Nav from '@/components/Nav';
+import Footer from '@/components/Footer';
 import GarminLink from '@/components/GarminLink';
 import { saveDailyMetrics, syncGarmin, unlinkGarmin } from '@/app/actions';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { getGarminStatus } from '@/lib/engine';
 
 const GARMIN_MESSAGES: Record<string, { text: string; ok: boolean }> = {
-  linked: { text: 'Compte Garmin lié — lance une première synchronisation.', ok: true },
+  linked: { text: 'Compte Garmin lié : lance une première synchronisation.', ok: true },
   unlinked: { text: 'Compte Garmin délié.', ok: true },
   link_error: {
-    text: 'Login Garmin refusé — vérifie email / mot de passe (et le code MFA si activé).',
+    text: 'Login Garmin refusé : vérifie email / mot de passe (et le code MFA si activé).',
     ok: false,
   },
-  sync_error: { text: 'Échec de synchronisation — réessaie dans une minute.', ok: false },
+  sync_error: { text: 'Échec de synchronisation : réessaie dans une minute.', ok: false },
 };
 
 function garminMessage(flag?: string) {
@@ -54,8 +55,8 @@ export default async function MetricsPage({
       <main className="mx-auto max-w-3xl px-6 py-10">
         <h1 className="text-2xl font-bold">Métriques physiologiques</h1>
         <p className="mt-2 text-sm text-ats-muted">
-          Alimente le moteur de décision : HRV, sommeil, FC repos — automatiquement
-          via Garmin, ou à la main.
+          Alimente le moteur de décision : HRV, sommeil, FC repos, automatiquement
+          via Garmin ou à la main.
         </p>
 
         {msg && (
@@ -85,7 +86,7 @@ export default async function MetricsPage({
                 <span className="font-medium text-ats-green">✓ Compte lié</span>
                 <span className="text-ats-muted">
                   {' '}
-                  — la sync tourne automatiquement chaque matin avant l&apos;ajustement
+                  : la sync tourne automatiquement chaque matin avant l&apos;ajustement
                   de séance.
                 </span>
               </p>
@@ -150,6 +151,7 @@ export default async function MetricsPage({
           </tbody>
         </table>
       </main>
+      <Footer />
     </>
   );
 }

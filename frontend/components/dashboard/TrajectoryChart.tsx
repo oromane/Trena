@@ -40,8 +40,8 @@ export default function TrajectoryChart({
   if (data.every((d) => d.fitness === 0)) {
     return (
       <p className="px-1 py-8 text-sm text-ats-muted">
-        La trajectoire apparaîtra dès tes premières séances réalisées (TRIMP saisi) —
-        la partie droite projettera alors l&apos;effet du plan jusqu&apos;à l&apos;objectif.
+        La trajectoire apparaîtra dès tes premières séances réalisées (TRIMP saisi).
+        La partie droite projettera alors l&apos;effet du plan jusqu&apos;à l&apos;objectif.
       </p>
     );
   }
@@ -131,7 +131,7 @@ export default function TrajectoryChart({
         <p className="mt-1 text-right text-[10px] text-ats-gray">
           Projection jusqu&apos;au{' '}
           {new Date(targetDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}{' '}
-          — simulation du plan restant.
+          : simulation du plan restant.
         </p>
       )}
     </div>

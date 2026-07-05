@@ -126,6 +126,88 @@ export async function unlinkGoogleCalendar() {
   revalidatePath('/dashboard');
 }
 
+/** Supprime TOUS les événements Trena du Google Calendar (doublons inclus). */
+export async function purgeCalendar() {
+  const { user } = await requireUser();
+  let flag = 'purge_error';
+  try {
+    const r = await engineFetch('/calendar/purge', { user_id: user.id });
+    flag = `purged_${r.events_deleted ?? 0}`;
+  } catch (e) {
+    console.error('purge failed:', e);
+  }
+  revalidatePath('/dashboard');
+  redirect(`/dashboard?calendar=${flag}`);
+}
+
+// ----------------------------------------------------------------- Séances
+export async function rescheduleSession(formData: FormData) {
+  const { user } = await requireUser();
+  await engineFetch('/sessions/reschedule', {
+    user_id: user.id,
+    session_id: String(formData.get('session_id')),
+    new_date: String(formData.get('new_date')),
+    new_time: formData.get('new_time') ? String(formData.get('new_time')) : null,
+  });
+  revalidatePath('/dashboard');
+}
+
+export async function createSession(formData: FormData) {
+  const { user } = await requireUser();
+  await engineFetch('/sessions/create', {
+    user_id: user.id,
+    scheduled_date: String(formData.get('scheduled_date')),
+    scheduled_time: formData.get('scheduled_time')
+      ? String(formData.get('scheduled_time'))
+      : null,
+    session_type: String(formData.get('session_type')),
+    duration_minutes: Number(formData.get('duration_minutes')),
+  });
+  revalidatePath('/dashboard');
+}
+
+export async function deleteSession(formData: FormData) {
+  const { user } = await requireUser();
+  await engineFetch('/sessions/delete', {
+    user_id: user.id,
+    session_id: String(formData.get('session_id')),
+  });
+  revalidatePath('/dashboard');
+}
+
+// ------------------------------------------------------------------ Profil
+export async function updateProfile(formData: FormData) {
+  const { supabase, user } = await requireUser();
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      full_name: String(formData.get('full_name') ?? '').trim() || null,
+      sessions_per_week: formData.get('sessions_per_week')
+        ? Number(formData.get('sessions_per_week'))
+        : null,
+    })
+    .eq('id', user.id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/profile');
+  revalidatePath('/dashboard');
+  redirect('/profile?status=profile_saved');
+}
+
+export async function updateEmail(formData: FormData) {
+  const { supabase } = await requireUser();
+  const email = String(formData.get('email'));
+  const { error } = await supabase.auth.updateUser({ email });
+  redirect(`/profile?status=${error ? 'email_error' : 'email_pending'}`);
+}
+
+export async function updatePassword(formData: FormData) {
+  const { supabase } = await requireUser();
+  const password = String(formData.get('password'));
+  if (password.length < 8) redirect('/profile?status=password_short');
+  const { error } = await supabase.auth.updateUser({ password });
+  redirect(`/profile?status=${error ? 'password_error' : 'password_saved'}`);
+}
+
 // ------------------------------------------------------------------ Garmin
 // Note: la liaison Garmin est gérée via le composant client GarminLink
 // et les API routes /api/garmin/link et /api/garmin/link/mfa.

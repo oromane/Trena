@@ -8,6 +8,7 @@ from .routers import dashboard as dashboard_router
 from .routers import garmin as garmin_router
 from .routers import ingest as ingest_router
 from .routers import plan as plan_router
+from .routers import sessions as sessions_router
 from .models import (
     DailyAdjustRequest,
     DailyAdjustResponse,
@@ -29,6 +30,7 @@ app.include_router(daily_router.router)
 app.include_router(calendar_router.router)
 app.include_router(dashboard_router.router)
 app.include_router(garmin_router.router)
+app.include_router(sessions_router.router)
 
 
 @app.get("/health")

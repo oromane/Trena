@@ -1,0 +1,48 @@
+[05/07/2026 15:25:48,95] === Demarrage push Trena === 
+Commit: Update: Trena project - 05/07/2026 15:25:48,95 
+Branche cible: main 
+ 
+[INFO] Status actuel du repository: 
+ M README.md
+ M SETUP.md
+ M Trena-push.bat
+ M backend-python/app/db/repo.py
+ M backend-python/app/engine/insights.py
+ M backend-python/app/engine/plan_generator.py
+ M backend-python/app/main.py
+ M backend-python/app/routers/calendar.py
+ M backend-python/app/routers/daily.py
+ M backend-python/app/routers/dashboard.py
+ M backend-python/app/routers/plan.py
+ M backend-python/app/services/calendar_sync.py
+ M frontend/app/actions.ts
+ M frontend/app/dashboard/page.tsx
+ M frontend/app/globals.css
+ M frontend/app/layout.tsx
+ M frontend/app/login/page.tsx
+ M frontend/app/metrics/page.tsx
+ M frontend/app/objectives/page.tsx
+ M frontend/components/GarminLink.tsx
+ M frontend/components/Nav.tsx
+ M frontend/components/dashboard/Hero.tsx
+ M frontend/components/dashboard/HistoryTimeline.tsx
+ M frontend/components/dashboard/InsightsCard.tsx
+ M frontend/components/dashboard/PhysioGrid.tsx
+ M frontend/components/dashboard/SessionCard.tsx
+ M frontend/components/dashboard/TrajectoryChart.tsx
+ M frontend/components/dashboard/WeekStrip.tsx
+ M frontend/lib/engine.ts
+ M frontend/tailwind.config.ts
+ M sql/schema.sql
+?? backend-python/app/engine/workout.py
+?? backend-python/app/routers/sessions.py
+?? backend-python/tests/test_sessions_and_purge.py
+?? frontend/app/api/export/
+?? frontend/app/profile/
+?? frontend/components/Footer.tsx
+?? frontend/components/ThemeToggle.tsx
+?? frontend/lib/format.ts
+?? push_trena_20260507_152548.log
+?? sql/migration-002.sql
+[OK] Fichiers ajoutes 
+[INFO] Aucune modification a commiter 

@@ -1,4 +1,5 @@
 import Nav from '@/components/Nav';
+import Footer from '@/components/Footer';
 import Hero from '@/components/dashboard/Hero';
 import PhysioGrid from '@/components/dashboard/PhysioGrid';
 import SessionCard from '@/components/dashboard/SessionCard';
@@ -16,13 +17,14 @@ import { getCalendarStatus, getDashboardSummary } from '@/lib/engine';
 const CALENDAR_MESSAGES: Record<string, { text: string; ok: boolean }> = {
   linked: { text: 'Google Calendar lié avec succès.', ok: true },
   denied: { text: 'Autorisation refusée côté Google.', ok: false },
-  state_error: { text: 'Session OAuth expirée — réessaie.', ok: false },
-  exchange_error: { text: "Échec de l'échange de tokens — réessaie.", ok: false },
+  state_error: { text: 'Session OAuth expirée : réessaie.', ok: false },
+  exchange_error: { text: "Échec de l'échange de tokens : réessaie.", ok: false },
   config_error: { text: 'Google OAuth non configuré côté serveur.', ok: false },
   publish_error: {
-    text: "Échec de la publication — vérifie que l'API Google Calendar est activée.",
+    text: "Échec de la publication : vérifie que l'API Google Calendar est activée.",
     ok: false,
   },
+  purge_error: { text: 'Échec du nettoyage du calendrier : réessaie.', ok: false },
 };
 
 function calendarMessage(flag?: string) {
@@ -30,6 +32,13 @@ function calendarMessage(flag?: string) {
   if (flag.startsWith('published_')) {
     const n = flag.slice('published_'.length);
     return { text: `${n} séance(s) publiée(s) dans ton calendrier.`, ok: true };
+  }
+  if (flag.startsWith('purged_')) {
+    const n = flag.slice('purged_'.length);
+    return {
+      text: `Calendrier nettoyé : ${n} événement(s) Trena supprimé(s). Tu peux republier le plan proprement.`,
+      ok: true,
+    };
   }
   return CALENDAR_MESSAGES[flag];
 }
@@ -53,13 +62,15 @@ export default async function DashboardPage({
   const { calendar: calendarFlag } = await searchParams;
   const calendarMsg = calendarMessage(calendarFlag);
 
-  const [summary, calStatus] = await Promise.all([
+  const [summary, calStatus, { data: profile }] = await Promise.all([
     getDashboardSummary(user!.id),
     getCalendarStatus(user!.id),
+    supabase.from('profiles').select('full_name').eq('id', user!.id).maybeSingle(),
   ]);
 
   const rawName = user?.email?.split('@')[0] ?? 'athlète';
-  const name = rawName.charAt(0).toUpperCase() + rawName.slice(1).split('.')[0];
+  const fallback = rawName.charAt(0).toUpperCase() + rawName.slice(1).split('.')[0];
+  const name = profile?.full_name?.split(' ')[0] || fallback;
 
   if (!summary) {
     return (
@@ -69,9 +80,10 @@ export default async function DashboardPage({
           <h1 className="text-2xl font-bold">Bonjour {name}</h1>
           <div className="card mt-6 p-6 text-sm text-ats-muted">
             Le moteur de performance est momentanément injoignable. Recharge la page
-            dans quelques secondes — tes données sont intactes.
+            dans quelques secondes : tes données sont intactes.
           </div>
         </main>
+        <Footer />
       </>
     );
   }
@@ -79,7 +91,7 @@ export default async function DashboardPage({
   return (
     <>
       <Nav />
-      <main className="pb-20">
+      <main className="pb-4">
         {calendarMsg && (
           <div className="mx-auto max-w-6xl px-6 pt-4">
             <p
@@ -117,6 +129,7 @@ export default async function DashboardPage({
               <SectionLabel>Séance recommandée</SectionLabel>
               <SessionCard
                 session={summary.today_session}
+                workout={summary.workout}
                 readiness={summary.readiness}
                 gainPct={summary.probability.gain_if_completed_pct}
               />
@@ -134,7 +147,7 @@ export default async function DashboardPage({
           {/* TRAJECTOIRE + PROBABILITÉ */}
           <section className="grid gap-4 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <SectionLabel>Trajectoire — modèle de Banister</SectionLabel>
+              <SectionLabel>Trajectoire · modèle de Banister</SectionLabel>
               <div className="card p-5">
                 <TrajectoryChart
                   trajectory={summary.trajectory}
@@ -177,6 +190,7 @@ export default async function DashboardPage({
           </section>
         </div>
       </main>
+      <Footer />
     </>
   );
 }

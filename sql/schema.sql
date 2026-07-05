@@ -7,6 +7,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    full_name VARCHAR(120),
+    sessions_per_week INT CHECK (sessions_per_week BETWEEN 1 AND 7),
     weekly_availability_mask INT[] NOT NULL DEFAULT '{60,60,60,60,60,120,120}'
         CHECK (array_length(weekly_availability_mask, 1) = 7)
 );
@@ -55,6 +57,7 @@ CREATE TABLE training_sessions (
     user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     objective_id UUID REFERENCES objectives(id) ON DELETE CASCADE,
     scheduled_date DATE NOT NULL,
+    scheduled_time TIME,
     session_type VARCHAR(50) NOT NULL
         CHECK (session_type IN ('INTERVAL','TEMPO','ENDURANCE','RECOVERY')),
     duration_planned_minutes INT NOT NULL,

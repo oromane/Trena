@@ -54,12 +54,18 @@ export interface WeekDay {
 export interface SessionRow {
   id: string;
   scheduled_date: string;
+  scheduled_time: string | null;
   session_type: string;
   duration_planned_minutes: number;
   intensity_target_trimp: number;
   status: string;
   duration_actual_minutes: number | null;
   trimp_actual: number | null;
+}
+
+export interface Workout {
+  blocks: { label: string; detail: string }[];
+  focus: string;
 }
 
 export interface DashboardSummary {
@@ -73,6 +79,7 @@ export interface DashboardSummary {
   } | null;
   readiness: { level: 'NORMAL' | 'CAUTION' | 'REDUCE'; hrv_zscore: number | null; detail: string };
   today_session: SessionRow | null;
+  workout: Workout | null;
   physio: {
     hrv: MetricBlock | null;
     sleep: MetricBlock | null;

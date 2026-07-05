@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from ..config import settings
 from ..db.repo import SupabaseRepo, get_repo
-from ..engine import banister, hrv, insights
+from ..engine import banister, hrv, insights, workout
 from ..security import require_internal_key
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"],
@@ -84,7 +84,7 @@ def summary(req: SummaryRequest,
     # ------------------------------------------------------------- readiness
     readiness_level = "NORMAL"
     z: float | None = None
-    readiness_detail = "Données HRV insuffisantes — planning maintenu."
+    readiness_detail = "Données HRV insuffisantes : planning maintenu."
     if today_row.get("hrv_ms") is not None and len(hrv_hist) >= 7:
         level, z_val = hrv.assess_readiness(
             hrv_hist, today_row["hrv_ms"],
@@ -234,6 +234,12 @@ def summary(req: SummaryRequest,
             "detail": readiness_detail,
         },
         "today_session": today_session,
+        "workout": (
+            workout.describe_session(
+                today_session["session_type"],
+                today_session["duration_planned_minutes"],
+            ) if today_session else None
+        ),
         "physio": physio,
         "probability": {
             "value": prob.value,

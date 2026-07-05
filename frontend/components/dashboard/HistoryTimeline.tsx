@@ -3,6 +3,7 @@
  */
 import { History } from 'lucide-react';
 import type { DashboardSummary } from '@/lib/engine';
+import { fmtDurationShort } from '@/lib/format';
 
 const TYPE_COLOR: Record<string, string> = {
   INTERVAL: '#F59E0B',
@@ -80,11 +81,11 @@ export default function HistoryTimeline({
                     </p>
                     <p className="metric mt-0.5 text-[11px] text-ats-muted">
                       {relativeDay(s.scheduled_date, today)} · prévu{' '}
-                      {s.duration_planned_minutes}′ / {s.intensity_target_trimp} TRIMP
+                      {fmtDurationShort(s.duration_planned_minutes)} / {s.intensity_target_trimp} TRIMP
                       {s.status === 'COMPLETED' && s.duration_actual_minutes != null && (
                         <>
                           {' '}
-                          → réalisé {s.duration_actual_minutes}′ / {s.trimp_actual} TRIMP
+                          → réalisé {fmtDurationShort(s.duration_actual_minutes)} / {s.trimp_actual} TRIMP
                         </>
                       )}
                     </p>

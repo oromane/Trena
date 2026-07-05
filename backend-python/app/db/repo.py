@@ -143,6 +143,30 @@ class SupabaseRepo:
         rows = self._patch("/training_sessions", {"id": f"eq.{session_id}"}, fields)
         return rows[0] if rows else None
 
+    def get_session(self, session_id: str, user_id: str) -> dict | None:
+        rows = self._get(
+            "/training_sessions",
+            {"id": f"eq.{session_id}", "user_id": f"eq.{user_id}",
+             "select": "*", "limit": "1"},
+        )
+        return rows[0] if rows else None
+
+    def delete_session(self, session_id: str, user_id: str) -> None:
+        r = self._client.delete(
+            "/training_sessions",
+            params={"id": f"eq.{session_id}", "user_id": f"eq.{user_id}"},
+        )
+        r.raise_for_status()
+
+    def clear_calendar_event_ids(self, user_id: str) -> None:
+        r = self._client.patch(
+            "/training_sessions",
+            params={"user_id": f"eq.{user_id}",
+                    "calendar_event_id": "not.is.null"},
+            json={"calendar_event_id": None},
+        )
+        r.raise_for_status()
+
     def delete_planned_sessions(self, user_id: str, from_date: date) -> None:
         r = self._client.delete(
             "/training_sessions",

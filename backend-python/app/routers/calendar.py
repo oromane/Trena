@@ -135,6 +135,42 @@ def store_tokens(req: StoreTokenRequest,
     return {"stored": True}
 
 
+class PurgeRequest(BaseModel):
+    user_id: str
+    days_back: int = 60
+    days_forward: int = 400
+
+
+@router.post("/purge")
+def purge_events(req: PurgeRequest,
+                 repo: SupabaseRepo = Depends(get_repo),
+                 gcal: calendar_sync.GoogleCalendarClient = Depends(get_gcal),
+                 ) -> dict:
+    """Supprime TOUS les événements créés par Trena dans le calendrier
+    (y compris les doublons de publications multiples), puis remet à zéro
+    les références calendar_event_id des séances."""
+    _require_google_config()
+    cipher = TokenCipher(settings.token_encryption_key)
+    token = calendar_sync.get_valid_access_token(repo, cipher, gcal, req.user_id)
+    if token is None:
+        raise HTTPException(status_code=404, detail="Compte Google non lié")
+
+    now = datetime.now(timezone.utc)
+    try:
+        deleted = gcal.purge_trena_events(
+            token,
+            time_min=(now - timedelta(days=req.days_back)).isoformat(),
+            time_max=(now + timedelta(days=req.days_forward)).isoformat(),
+        )
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Google Calendar a refusé la purge : {e.response.text[:200]}",
+        )
+    repo.clear_calendar_event_ids(req.user_id)
+    return {"events_deleted": deleted}
+
+
 class PublishRequest(BaseModel):
     user_id: str
     from_date: date | None = None
@@ -168,6 +204,9 @@ def publish_plan(req: PublishRequest,
 
     created = 0
     for s in sessions:
+        stime = None
+        if s.get("scheduled_time"):
+            stime = datetime.strptime(s["scheduled_time"][:5], "%H:%M").time()
         event = calendar_sync.session_to_event(
             s["session_type"],
             s["duration_planned_minutes"],
@@ -175,6 +214,7 @@ def publish_plan(req: PublishRequest,
             date.fromisoformat(s["scheduled_date"]),
             start_hour=req.start_hour,
             tz=req.timezone,
+            start_time=stime,
         )
         try:
             result = gcal.create_event(token, event)
