@@ -1,0 +1,1 @@
+start /min "" .\bin\cloudflared.exe tunnel --config config.yml run trena

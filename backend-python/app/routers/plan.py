@@ -1,10 +1,11 @@
 """Génération et persistance du plan d'entraînement."""
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from ..db.repo import SupabaseRepo, get_repo
+from ..engine import calibration
 from ..engine.plan_generator import generate_plan
 from ..security import require_internal_key
 
@@ -34,6 +35,77 @@ class PlanResponse(BaseModel):
     total_trimp: int
     persisted: bool
     sessions: list[PlannedSessionOut]
+
+
+class CalibrateRequest(BaseModel):
+    user_id: str
+    history_days: int = 180
+    persist: bool = True
+    min_r2: float = calibration.DEFAULT_MIN_R2
+
+
+class CalibrateResponse(BaseModel):
+    calibrated: bool
+    persisted: bool = False
+    tau1: float | None = None
+    tau2: float | None = None
+    k1: float | None = None
+    k2: float | None = None
+    p0: float | None = None
+    r2: float | None = None
+    rmse: float | None = None
+    n_days: int | None = None
+    n_points: int | None = None
+    detail: str | None = None
+
+
+@router.post("/calibrate", response_model=CalibrateResponse)
+def calibrate_user(req: CalibrateRequest,
+                   repo: SupabaseRepo = Depends(get_repo)) -> CalibrateResponse:
+    """Calibre tau1/tau2/k1/k2/p0 par régression sur l'historique réel.
+
+    Proxy de performance : VO2max Garmin. Nécessite >= 8 semaines de
+    charges réalisées et >= 10 mesures de VO2max, sinon les défauts
+    du moteur restent en vigueur.
+    """
+    if repo.get_profile(req.user_id) is None:
+        raise HTTPException(status_code=404, detail="Profil introuvable")
+
+    loads = repo.get_completed_loads(req.user_id, days=req.history_days)
+    wellness = repo.get_wellness_history(req.user_id, days=req.history_days)
+    result = calibration.calibrate_from_history(loads, wellness,
+                                                min_r2=req.min_r2)
+    if result is None:
+        return CalibrateResponse(
+            calibrated=False,
+            detail=(
+                "Historique insuffisant ou ajustement trop faible : "
+                f">= {calibration.MIN_HISTORY_DAYS} jours de charges, "
+                f">= {calibration.MIN_PERF_POINTS} mesures VO2max et "
+                f"R² >= {req.min_r2} requis. Paramètres par défaut conservés."
+            ),
+        )
+
+    persisted = False
+    if req.persist:
+        repo.update_profile(req.user_id, {
+            "banister_tau1": result.params.tau1,
+            "banister_tau2": result.params.tau2,
+            "banister_k1": result.params.k1,
+            "banister_k2": result.params.k2,
+            "banister_p0": result.params.p0,
+            "banister_r2": result.r2,
+            "banister_calibrated_at": datetime.now(timezone.utc).isoformat(),
+        })
+        persisted = True
+
+    return CalibrateResponse(
+        calibrated=True, persisted=persisted,
+        tau1=result.params.tau1, tau2=result.params.tau2,
+        k1=result.params.k1, k2=result.params.k2, p0=result.params.p0,
+        r2=result.r2, rmse=result.rmse,
+        n_days=result.n_days, n_points=result.n_points,
+    )
 
 
 @router.post("/generate", response_model=PlanResponse)

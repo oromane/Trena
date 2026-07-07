@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from ..config import settings
 from ..db.repo import SupabaseRepo, get_repo
-from ..engine import banister, hrv, insights, workout
+from ..engine import banister, calibration, foster, hrv, insights, workout
 from ..security import require_internal_key
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"],
@@ -136,9 +136,13 @@ def summary(req: SummaryRequest,
         elif s_date(s) >= today:
             loads[idx] = float(s["intensity_target_trimp"])
 
-    params = banister.BanisterParams(
-        tau1=settings.default_tau1, tau2=settings.default_tau2,
-        k1=settings.default_k1, k2=settings.default_k2,
+    # Paramètres calibrés individuellement si disponibles (migration 004)
+    params = calibration.params_from_profile(
+        repo.get_profile(req.user_id),
+        banister.BanisterParams(
+            tau1=settings.default_tau1, tau2=settings.default_tau2,
+            k1=settings.default_k1, k2=settings.default_k2,
+        ),
     )
     state = banister.simulate(loads, params)
     form_now = float(state.form[n_past - 1])
@@ -191,6 +195,9 @@ def summary(req: SummaryRequest,
         if s["status"] == "COMPLETED"
         and this_week_start - timedelta(days=7) <= s_date(s) < this_week_start
     )
+    # Monotonie / contrainte de Foster sur les 7 derniers jours réalisés
+    foster_result = foster.foster_metrics(loads[n_past - 7:n_past])
+
     insight_list = insights.generate_insights(
         hrv_series=hrv_hist + ([today_row["hrv_ms"]]
                                if today_row.get("hrv_ms") is not None else []),
@@ -201,6 +208,8 @@ def summary(req: SummaryRequest,
         readiness=readiness_level,
         hrv_zscore=z,
         adherence=prob.adherence,
+        foster_level=foster_result.level,
+        foster_monotony=foster_result.monotony,
     )
 
     # ------------------------------------------------------------- historique
@@ -235,11 +244,13 @@ def summary(req: SummaryRequest,
         },
         "today_session": today_session,
         "workout": (
-            workout.describe_session(
+            # Structure personnalisée (modèle) prioritaire sur le déroulé générique
+            today_session.get("structure")
+            or workout.describe_session(
                 today_session["session_type"],
                 today_session["duration_planned_minutes"],
-            ) if today_session else None
-        ),
+            )
+        ) if today_session else None,
         "physio": physio,
         "probability": {
             "value": prob.value,
@@ -250,6 +261,12 @@ def summary(req: SummaryRequest,
             "gain_if_completed_pct": gain_if_completed,
         },
         "trajectory": trajectory,
+        "foster": {
+            "monotony": foster_result.monotony,
+            "strain": foster_result.strain,
+            "weekly_load": foster_result.weekly_load,
+            "level": foster_result.level,
+        },
         "weekly_load": weekly_load,
         "week": week_days,
         "history": past_sessions,

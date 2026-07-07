@@ -1,0 +1,75 @@
+# Production (VPS) : aucun port public — tout le trafic entre par le tunnel
+# Cloudflare. Lancer avec :
+#   docker compose -f docker-compose.prod.yml up -d --build
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+    # Pas de ports: — joignable uniquement par cloudflared via le réseau interne
+    environment:
+      - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - PERFORMANCE_ENGINE_URL=http://performance-engine:8000
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - SITE_URL=${SITE_URL}
+    restart: always
+    networks:
+      - app-network
+    depends_on:
+      - performance-engine
+
+  performance-engine:
+    build:
+      context: ./backend-python
+      dockerfile: Dockerfile
+    environment:
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - TOKEN_ENCRYPTION_KEY=${TOKEN_ENCRYPTION_KEY}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+    restart: always
+    networks:
+      - app-network
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    # Interface accessible uniquement depuis le VPS (tunnel SSH) ou via
+    # automation.nexolab.fr si routé dans le tunnel Cloudflare (+ CF Access).
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      - N8N_HOST=${N8N_HOST}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=https://${N8N_HOST}/
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      # Indispensable pour que le cron "6h00" soit bien 6h00 heure française
+      - GENERIC_TIMEZONE=Europe/Paris
+      - TZ=Europe/Paris
+    volumes:
+      - n8n_data:/home/node/.n8n
+    restart: always
+    networks:
+      - app-network
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
+    restart: always
+    networks:
+      - app-network
+    depends_on:
+      - frontend
+
+volumes:
+  n8n_data:
+
+networks:
+  app-network:
+    driver: bridge

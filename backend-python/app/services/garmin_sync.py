@@ -175,6 +175,51 @@ class GarminClient:
 
         return out
 
+    def fetch_activities(self, start: date, end: date) -> list[dict]:
+        """Activités brutes Garmin entre deux dates (bornes incluses)."""
+        try:
+            return self._g.get_activities_by_date(
+                start.isoformat(), end.isoformat()
+            ) or []
+        except Exception:
+            return []
+
+    def fetch_wellness(self, day: date) -> dict:
+        """Bien-être étendu du jour : pas, calories, poids, VO2max, Body Battery..."""
+        iso = day.isoformat()
+        out: dict[str, Any] = {"recorded_date": iso}
+
+        try:
+            s = self._g.get_user_summary(iso) or {}
+            out["steps"] = s.get("totalSteps")
+            out["calories_total"] = s.get("totalKilocalories")
+            out["floors_climbed"] = s.get("floorsAscended")
+            out["body_battery_high"] = s.get("bodyBatteryHighestValue")
+            out["body_battery_low"] = s.get("bodyBatteryLowestValue")
+            mod = s.get("moderateIntensityMinutes") or 0
+            vig = s.get("vigorousIntensityMinutes") or 0
+            out["intensity_minutes"] = (mod + vig) or None
+        except Exception:
+            pass
+
+        try:
+            comp = self._g.get_body_composition(iso) or {}
+            weight_g = (comp.get("totalAverage") or {}).get("weight")
+            if weight_g:
+                out["weight_kg"] = round(weight_g / 1000, 1)
+        except Exception:
+            pass
+
+        try:
+            mm = self._g.get_max_metrics(iso) or []
+            if mm:
+                generic = (mm[0].get("generic") or {})
+                out["vo2max"] = generic.get("vo2MaxValue")
+        except Exception:
+            pass
+
+        return out
+
 
 def complete_mfa(session_id: str, mfa_code: str) -> GarminClient:
     """Étape 2 : soumet le code MFA via resume_login().
@@ -215,4 +260,105 @@ def sync_user(repo, cipher, client: GarminClient, user_id: str,
             rows.append(row)
     if rows:
         repo.upsert_daily_metrics(user_id, rows)
+    return {"days_fetched": days, "days_with_data": len(rows)}
+
+
+# ------------------------------------------------------------- activités
+# Types d'activité Garmin considérés comme de la course à pied
+RUNNING_TYPES = {
+    "running", "trail_running", "track_running",
+    "treadmill_running", "street_running", "indoor_running",
+}
+
+
+def import_activities(repo, client: GarminClient, user_id: str,
+                      days: int = 14, until: date | None = None,
+                      hr_rest: float = 60.0, hr_max: float = 190.0,
+                      sex: str = "M") -> dict:
+    """Importe les activités course à pied et met à jour les séances.
+
+    - Activité déjà importée (garmin_activity_id connu) : ignorée.
+    - Séance planifiée le même jour : passée en COMPLETED avec le réalisé.
+    - Sinon : séance COMPLETED créée (activité hors plan, compte dans la charge).
+    """
+    from ..engine.trimp import trimp as trimp_score
+
+    until = until or date.today()
+    start = until - timedelta(days=days - 1)
+    activities = client.fetch_activities(start, until)
+
+    imported = matched = created = skipped = 0
+    for a in activities:
+        type_key = ((a.get("activityType") or {}).get("typeKey") or "").lower()
+        if type_key not in RUNNING_TYPES:
+            continue
+        activity_id = str(a.get("activityId") or "")
+        if not activity_id:
+            continue
+        if repo.get_session_by_activity(user_id, activity_id) is not None:
+            skipped += 1
+            continue
+
+        day_str = str(a.get("startTimeLocal") or "")[:10]
+        if not day_str:
+            continue
+        duration_s = a.get("movingDuration") or a.get("duration") or 0
+        duration_min = max(1, round(duration_s / 60))
+        avg_hr = a.get("averageHR")
+
+        if avg_hr and hr_max > hr_rest:
+            trimp_val = round(trimp_score(duration_min, avg_hr, hr_rest,
+                                          hr_max, sex))
+        else:
+            trimp_val = round(duration_min * 1.2)  # fallback sans FC
+
+        actuals = {
+            "status": "COMPLETED",
+            "duration_actual_minutes": duration_min,
+            "trimp_actual": trimp_val,
+            "distance_m": round(a["distance"]) if a.get("distance") else None,
+            "avg_hr": round(avg_hr) if avg_hr else None,
+            "garmin_activity_id": activity_id,
+        }
+
+        planned = repo.get_session_for_date(user_id, date.fromisoformat(day_str))
+        if planned is not None and planned.get("status") in ("PLANNED", "MODIFIED"):
+            repo.update_session(planned["id"], actuals)
+            matched += 1
+        else:
+            repo.insert_sessions([{
+                "user_id": user_id,
+                "scheduled_date": day_str,
+                "session_type": "ENDURANCE",
+                "title": a.get("activityName"),
+                "duration_planned_minutes": duration_min,
+                "intensity_target_trimp": trimp_val,
+                **actuals,
+            }])
+            created += 1
+        imported += 1
+
+    return {"activities_found": len(activities), "imported": imported,
+            "matched": matched, "created": created,
+            "already_imported": skipped}
+
+
+# ------------------------------------------------------------- bien-être
+WELLNESS_FIELDS = ("weight_kg", "steps", "calories_total", "vo2max",
+                   "body_battery_high", "body_battery_low",
+                   "floors_climbed", "intensity_minutes")
+
+
+def sync_wellness(repo, client: GarminClient, user_id: str,
+                  days: int = 7, until: date | None = None) -> dict:
+    """Récupère le bien-être étendu et upsert dans garmin_wellness."""
+    until = until or date.today()
+    rows = []
+    for i in range(days):
+        d = until - timedelta(days=i)
+        row = client.fetch_wellness(d)
+        if any(row.get(k) is not None for k in WELLNESS_FIELDS):
+            rows.append(row)
+    if rows:
+        repo.upsert_wellness(user_id, rows)
     return {"days_fetched": days, "days_with_data": len(rows)}

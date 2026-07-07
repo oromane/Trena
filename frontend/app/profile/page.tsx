@@ -1,11 +1,24 @@
-import { Download, KeyRound, Mail, User } from 'lucide-react';
+import { Download, HeartPulse, KeyRound, Mail, User } from 'lucide-react';
 import Nav from '@/components/Nav';
 import Footer from '@/components/Footer';
-import { updateEmail, updatePassword, updateProfile } from '@/app/actions';
+import {
+  updateEmail,
+  updateHeartProfile,
+  updatePassword,
+  updateProfile,
+} from '@/app/actions';
 import { createSupabaseServer } from '@/lib/supabase/server';
 
 const MESSAGES: Record<string, { text: string; ok: boolean }> = {
   profile_saved: { text: 'Profil mis à jour.', ok: true },
+  profile_saved_plan: {
+    text: 'Profil mis à jour : le plan a été régénéré avec ton nombre de séances/semaine.',
+    ok: true,
+  },
+  profile_saved_noplan: {
+    text: 'Profil mis à jour. Le plan sera appliqué dès qu’un objectif actif existe (ou régénère-le depuis le cockpit).',
+    ok: true,
+  },
   email_pending: {
     text: 'Vérifie ta boîte mail : un lien de confirmation a été envoyé à la nouvelle adresse.',
     ok: true,
@@ -36,7 +49,7 @@ export default async function ProfilePage({
   const { data: { user } } = await supabase.auth.getUser();
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, sessions_per_week')
+    .select('full_name, sessions_per_week, hr_max, hr_rest, sex')
     .eq('id', user!.id)
     .maybeSingle();
 
@@ -103,6 +116,46 @@ export default async function ProfilePage({
             <p className="text-[11px] leading-relaxed text-ats-gray sm:col-span-2">
               Le nombre de séances s&apos;applique à la prochaine (re)génération du
               plan : Trena garde les jours où tu as le plus de disponibilité.
+            </p>
+          </form>
+        </section>
+
+        {/* ------------------------------------------ paramètres cardiaques */}
+        <section className="card mt-4 p-6">
+          <div className="flex items-center gap-2">
+            <HeartPulse className="h-4 w-4 text-ats-muted" />
+            <Label>Paramètres cardiaques</Label>
+          </div>
+          <form action={updateHeartProfile} className="mt-4 flex flex-wrap items-end gap-3">
+            <label className="text-xs text-ats-muted">
+              FC max (bpm)
+              <input name="hr_max" type="number" min={120} max={230}
+                     defaultValue={profile?.hr_max ?? ''}
+                     placeholder="190"
+                     className={`${INPUT_CLS} mt-1.5 w-28`} />
+            </label>
+            <label className="text-xs text-ats-muted">
+              FC repos (bpm)
+              <input name="hr_rest" type="number" min={30} max={100}
+                     defaultValue={profile?.hr_rest ?? ''}
+                     placeholder="auto (mesures)"
+                     className={`${INPUT_CLS} mt-1.5 w-32`} />
+            </label>
+            <label className="text-xs text-ats-muted">
+              Sexe (formule TRIMP)
+              <select name="sex" defaultValue={profile?.sex ?? ''}
+                      className={`${INPUT_CLS} mt-1.5 w-32`}>
+                <option value="">Non précisé</option>
+                <option value="F">Femme</option>
+                <option value="M">Homme</option>
+              </select>
+            </label>
+            <button className="rounded-xl bg-ats-card2 px-4 py-2 text-sm font-semibold transition-colors hover:bg-ats-gray/40">
+              Enregistrer
+            </button>
+            <p className="w-full text-[11px] leading-relaxed text-ats-gray">
+              Utilisés pour calculer le TRIMP réel de tes activités importées.
+              FC repos vide : Trena utilise la moyenne de tes mesures Garmin.
             </p>
           </form>
         </section>

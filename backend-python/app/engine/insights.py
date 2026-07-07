@@ -91,6 +91,8 @@ def generate_insights(
     readiness: str,
     hrv_zscore: float | None,
     adherence: float,
+    foster_level: str | None = None,
+    foster_monotony: float | None = None,
 ) -> list[Insight]:
     """Règles déterministes : 7 derniers jours vs 21 précédents.
 
@@ -144,6 +146,18 @@ def generate_insights(
         out.append(Insight("readiness", "positive",
             "Signaux physiologiques dans ta norme : prêt·e à encaisser la "
             "séance prévue."))
+
+    if foster_level == "high":
+        m = f" (monotonie {foster_monotony})" if foster_monotony else ""
+        out.append(Insight("load", "warning",
+            f"Charge trop uniforme sur 7 jours{m} : alterne jours durs et "
+            f"jours faciles pour réduire le risque de surentraînement "
+            f"(indice de Foster)."))
+    elif foster_level == "caution":
+        out.append(Insight("load", "info",
+            f"Monotonie d'entraînement en hausse "
+            f"({foster_monotony}) : garde au moins un jour très "
+            f"facile ou de repos complet cette semaine."))
 
     if adherence < 0.6:
         out.append(Insight("adherence", "warning",

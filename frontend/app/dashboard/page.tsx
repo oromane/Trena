@@ -6,13 +6,17 @@ import SessionCard from '@/components/dashboard/SessionCard';
 import ObjectiveCard from '@/components/dashboard/ObjectiveCard';
 import ProbabilityCard from '@/components/dashboard/ProbabilityCard';
 import TrajectoryChart from '@/components/dashboard/TrajectoryChart';
-import WeekStrip from '@/components/dashboard/WeekStrip';
+import CalendarView from '@/components/dashboard/CalendarView';
 import LoadChart from '@/components/dashboard/LoadChart';
 import HistoryTimeline from '@/components/dashboard/HistoryTimeline';
 import InsightsCard from '@/components/dashboard/InsightsCard';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { ensureProfile } from '@/app/actions';
-import { getCalendarStatus, getDashboardSummary } from '@/lib/engine';
+import {
+  getCalendarStatus,
+  getDashboardSummary,
+  getWorkoutTemplates,
+} from '@/lib/engine';
 
 const CALENDAR_MESSAGES: Record<string, { text: string; ok: boolean }> = {
   linked: { text: 'Google Calendar lié avec succès.', ok: true },
@@ -67,6 +71,7 @@ export default async function DashboardPage({
     getCalendarStatus(user!.id),
     supabase.from('profiles').select('full_name').eq('id', user!.id).maybeSingle(),
   ]);
+  const templates = await getWorkoutTemplates();
 
   const rawName = user?.email?.split('@')[0] ?? 'athlète';
   const fallback = rawName.charAt(0).toUpperCase() + rawName.slice(1).split('.')[0];
@@ -161,11 +166,14 @@ export default async function DashboardPage({
             </div>
           </section>
 
-          {/* SEMAINE */}
-          <section>
-            <SectionLabel>Cette semaine</SectionLabel>
+          {/* CALENDRIER */}
+          <section id="calendrier" className="scroll-mt-20">
+            <SectionLabel>Calendrier</SectionLabel>
             <div className="card p-5">
-              <WeekStrip week={summary.week} calendarLinked={calStatus.linked} />
+              <CalendarView
+                calendarLinked={calStatus.linked}
+                templates={templates}
+              />
             </div>
           </section>
 

@@ -54,6 +54,10 @@ class SupabaseRepo:
         rows = self._get("/profiles", {"id": f"eq.{user_id}", "select": "*"})
         return rows[0] if rows else None
 
+    def update_profile(self, user_id: str, fields: dict) -> dict | None:
+        rows = self._patch("/profiles", {"id": f"eq.{user_id}"}, fields)
+        return rows[0] if rows else None
+
     def list_active_user_ids(self) -> list[str]:
         rows = self._get(
             "/objectives", {"is_active": "eq.true", "select": "user_id"}
@@ -177,6 +181,34 @@ class SupabaseRepo:
             },
         )
         r.raise_for_status()
+
+    def get_session_by_activity(self, user_id: str,
+                                activity_id: str) -> dict | None:
+        rows = self._get(
+            "/training_sessions",
+            {"user_id": f"eq.{user_id}",
+             "garmin_activity_id": f"eq.{activity_id}",
+             "select": "id", "limit": "1"},
+        )
+        return rows[0] if rows else None
+
+    # ---------------------------------------------------------- garmin_wellness
+    def upsert_wellness(self, user_id: str, rows: list[dict]) -> list[dict]:
+        payload = [{**r, "user_id": user_id} for r in rows]
+        return self._post(
+            "/garmin_wellness?on_conflict=user_id,recorded_date",
+            payload,
+            headers={"Prefer": "return=representation,resolution=merge-duplicates"},
+        )
+
+    def get_wellness_history(self, user_id: str, days: int = 90) -> list[dict]:
+        since = (date.today() - timedelta(days=days)).isoformat()
+        return self._get(
+            "/garmin_wellness",
+            {"user_id": f"eq.{user_id}",
+             "recorded_date": f"gte.{since}",
+             "select": "*", "order": "recorded_date.asc"},
+        )
 
     # ------------------------------------------------------------ oauth_tokens
     def get_oauth_token(self, user_id: str, provider: str) -> dict | None:

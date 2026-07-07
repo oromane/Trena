@@ -12,12 +12,16 @@ const LINKS = [
 
 export default function Nav() {
   return (
-    <nav className="sticky top-0 z-40 border-b border-white/5 bg-ats-bg/80 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-6xl items-center gap-8 px-6 py-3.5 text-sm">
+    <nav
+      className="sticky top-0 z-40 border-b border-white/5 bg-ats-bg/80 backdrop-blur-xl"
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}
+    >
+      <div className="mx-auto flex max-w-6xl items-center gap-8 px-4 py-3.5 text-sm sm:px-6">
         <Link href="/dashboard" className="shrink-0">
           <Logo />
         </Link>
-        <div className="flex items-center gap-6">
+        {/* Liens desktop : sur mobile, la navigation passe par la barre basse */}
+        <div className="hidden items-center gap-6 md:flex">
           {LINKS.map((l) => (
             <Link
               key={l.href}

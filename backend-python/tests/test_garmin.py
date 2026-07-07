@@ -202,7 +202,11 @@ def test_sync_endpoint_full_flow(client, repo):
                         json={"user_id": "u1", "days": 2,
                               "until": "2026-07-04"})
     assert r.status_code == 200
-    assert r.json() == {"days_fetched": 2, "days_with_data": 2}
+    body = r.json()
+    # Métriques quotidiennes + sections bien-être/activités (best effort)
+    assert body["days_fetched"] == 2
+    assert body["days_with_data"] == 2
+    assert "wellness" in body and "activities" in body
     repo.upsert_daily_metrics.assert_called_once()
 
 

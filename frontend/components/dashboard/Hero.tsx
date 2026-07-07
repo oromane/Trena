@@ -75,7 +75,7 @@ export default function Hero({
         className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full opacity-[0.07]"
         style={{ background: `radial-gradient(closest-side, ${state.color}, transparent)` }}
       />
-      <div className="mx-auto flex max-w-6xl flex-col items-start gap-10 px-6 pb-12 pt-14 md:flex-row md:items-center md:justify-between">
+      <div className="mx-auto flex max-w-6xl flex-col items-start gap-8 px-4 pb-10 pt-8 sm:px-6 md:flex-row md:items-center md:justify-between md:gap-10 md:pb-12 md:pt-14">
         <div className="max-w-xl">
           <motion.p
             initial={{ opacity: 0, y: 8 }}
@@ -140,7 +140,7 @@ export default function Hero({
         </div>
 
         {/* Anneau de probabilité */}
-        <div className="relative shrink-0" style={{ width: RING.size, height: RING.size }}>
+        <div className="relative mx-auto shrink-0 md:mx-0" style={{ width: RING.size, height: RING.size }}>
           <svg width={RING.size} height={RING.size} className="-rotate-90">
             <circle
               cx={RING.size / 2}

@@ -56,6 +56,19 @@ def _try_garmin_sync(repo: SupabaseRepo, user_id: str) -> None:
             cipher.decrypt(row["access_token_encrypted"])
         )
         garmin_sync.sync_user(repo, cipher, client, user_id, days=3)
+        # Bien-être étendu + activités réalisées (chacun best-effort)
+        try:
+            garmin_sync.sync_wellness(repo, client, user_id, days=3)
+        except Exception:
+            pass
+        try:
+            from .garmin import _hr_params
+            hr_rest, hr_max, sex = _hr_params(repo, user_id)
+            garmin_sync.import_activities(repo, client, user_id, days=3,
+                                          hr_rest=hr_rest, hr_max=hr_max,
+                                          sex=sex)
+        except Exception:
+            pass
     except Exception:
         pass
 
@@ -112,7 +125,12 @@ def run_daily_adjust(req: DailyRunRequest,
         duration_minutes=session["duration_planned_minutes"],
         target_trimp=session["intensity_target_trimp"],
     )
-    result = planner.adjust_session(planned, readiness, z, settings.default_tau2)
+    # tau2 calibré individuellement si disponible (migration 004)
+    profile = repo.get_profile(req.user_id)
+    tau2_base = float(
+        (profile or {}).get("banister_tau2") or settings.default_tau2
+    )
+    result = planner.adjust_session(planned, readiness, z, tau2_base)
 
     if result.modified:
         repo.update_session(session["id"], {

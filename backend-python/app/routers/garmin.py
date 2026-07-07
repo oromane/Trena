@@ -125,9 +125,26 @@ class SyncRequest(BaseModel):
     until: date_type | None = None
 
 
+def _hr_params(repo: SupabaseRepo, user_id: str) -> tuple[float, float, str]:
+    """(hr_rest, hr_max, sex) depuis le profil, avec repli raisonnable."""
+    profile = repo.get_profile(user_id) or {}
+    hr_rest = profile.get("hr_rest")
+    if hr_rest is None:
+        # repli : moyenne des FC repos mesurées, sinon 60
+        try:
+            hist = repo.get_metrics_history(user_id, days=28)
+            vals = [m["resting_heart_rate"] for m in hist
+                    if m.get("resting_heart_rate")]
+            hr_rest = round(sum(vals) / len(vals)) if vals else 60
+        except Exception:
+            hr_rest = 60
+    return float(hr_rest), float(profile.get("hr_max") or 190), \
+        (profile.get("sex") or "M")
+
+
 @router.post("/sync")
 def sync(req: SyncRequest, repo: SupabaseRepo = Depends(get_repo)) -> dict:
-    """Récupère les N derniers jours et upsert dans daily_metrics.
+    """Récupère métriques quotidiennes + bien-être étendu + activités.
     Re-persiste le jeton garth (rafraîchi automatiquement par la lib)."""
     if not 1 <= req.days <= 60:
         raise HTTPException(status_code=422, detail="days doit être entre 1 et 60")
@@ -137,6 +154,20 @@ def sync(req: SyncRequest, repo: SupabaseRepo = Depends(get_repo)) -> dict:
     result = garmin_sync.sync_user(repo, cipher, client, req.user_id,
                                    days=req.days, until=req.until)
 
+    # Bien-être étendu + activités : best effort, jamais bloquant
+    try:
+        result["wellness"] = garmin_sync.sync_wellness(
+            repo, client, req.user_id, days=req.days, until=req.until)
+    except Exception:
+        result["wellness"] = None
+    try:
+        hr_rest, hr_max, sex = _hr_params(repo, req.user_id)
+        result["activities"] = garmin_sync.import_activities(
+            repo, client, req.user_id, days=req.days, until=req.until,
+            hr_rest=hr_rest, hr_max=hr_max, sex=sex)
+    except Exception:
+        result["activities"] = None
+
     # Persistance du jeton potentiellement rafraîchi (best effort)
     try:
         _store_token(repo, cipher, client, req.user_id)
@@ -144,3 +175,23 @@ def sync(req: SyncRequest, repo: SupabaseRepo = Depends(get_repo)) -> dict:
         pass
 
     return result
+
+
+class ImportActivitiesRequest(BaseModel):
+    user_id: str
+    days: int = 14
+    until: date_type | None = None
+
+
+@router.post("/import-activities")
+def import_activities(req: ImportActivitiesRequest,
+                      repo: SupabaseRepo = Depends(get_repo)) -> dict:
+    """Importe les activités course à pied : TRIMP réel, statut COMPLETED."""
+    if not 1 <= req.days <= 90:
+        raise HTTPException(status_code=422, detail="days doit être entre 1 et 90")
+    cipher = _require_crypto()
+    client = _load_client(repo, cipher, req.user_id)
+    hr_rest, hr_max, sex = _hr_params(repo, req.user_id)
+    return garmin_sync.import_activities(
+        repo, client, req.user_id, days=req.days, until=req.until,
+        hr_rest=hr_rest, hr_max=hr_max, sex=sex)

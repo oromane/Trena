@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from ..config import settings
 from ..crypto import TokenCipher
 from ..db.repo import SupabaseRepo, get_repo
+from ..engine import templates
 from ..engine.plan_generator import TRIMP_PER_MIN
 from ..security import require_internal_key
 from ..services import calendar_sync
@@ -86,35 +87,193 @@ def reschedule(req: RescheduleRequest,
     return {"rescheduled": True, "calendar_synced": calendar_synced}
 
 
+class UpdateRequest(BaseModel):
+    user_id: str
+    session_id: str
+    scheduled_date: date_type | None = None
+    scheduled_time: str | None = None
+    session_type: str | None = None
+    duration_minutes: int | None = None
+    title: str | None = None
+    # Remplacement complet du contenu par le constructeur libre :
+    custom: dict | None = None
+
+
+@router.post("/update")
+def update(req: UpdateRequest,
+           repo: SupabaseRepo = Depends(get_repo)) -> dict:
+    """Personnalise une séance existante : planification, contenu, ou les deux.
+
+    - Champs simples : type, durée (TRIMP recalculé), titre, date, heure.
+    - `custom` : remplace tout le contenu par une séance construite.
+    """
+    session = repo.get_session(req.session_id, req.user_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Séance introuvable")
+
+    fields: dict = {}
+
+    if req.custom:
+        try:
+            built = templates.build_custom_workout(
+                req.custom.get("title", ""), req.custom.get("steps") or []
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        fields.update({
+            "session_type": built["session_type"],
+            "title": built["title"],
+            "structure": built["structure"],
+            "duration_planned_minutes": built["duration_minutes"],
+            "intensity_target_trimp": built["target_trimp"],
+        })
+    else:
+        if req.session_type is not None:
+            if req.session_type not in VALID_TYPES:
+                raise HTTPException(status_code=422,
+                                    detail=f"session_type doit être dans {VALID_TYPES}")
+            fields["session_type"] = req.session_type
+        if req.duration_minutes is not None:
+            if not 10 <= req.duration_minutes <= 360:
+                raise HTTPException(status_code=422,
+                                    detail="duration_minutes doit être entre 10 et 360")
+            fields["duration_planned_minutes"] = req.duration_minutes
+        if req.title is not None:
+            fields["title"] = req.title.strip()[:150] or None
+        # Type ou durée modifié : TRIMP recalculé, structure obsolète purgée
+        if "session_type" in fields or "duration_planned_minutes" in fields:
+            new_type = fields.get("session_type", session["session_type"])
+            new_dur = fields.get("duration_planned_minutes",
+                                 session["duration_planned_minutes"])
+            fields["intensity_target_trimp"] = round(new_dur * TRIMP_PER_MIN[new_type])
+            if session.get("structure"):
+                fields["structure"] = None
+
+    if req.scheduled_date is not None:
+        fields["scheduled_date"] = req.scheduled_date.isoformat()
+    new_time = _parse_time(req.scheduled_time)
+    if new_time is not None:
+        fields["scheduled_time"] = new_time.isoformat()
+
+    if not fields:
+        raise HTTPException(status_code=422, detail="Aucune modification fournie")
+    repo.update_session(req.session_id, fields)
+
+    # Sync Google Calendar (horaire + contenu), best effort
+    calendar_synced = False
+    if session.get("calendar_event_id"):
+        gcal, token = _calendar_client_and_token(repo, req.user_id)
+        if gcal and token:
+            try:
+                day = (req.scheduled_date
+                       or date_type.fromisoformat(session["scheduled_date"]))
+                event = calendar_sync.session_to_event(
+                    fields.get("session_type", session["session_type"]),
+                    fields.get("duration_planned_minutes",
+                               session["duration_planned_minutes"]),
+                    fields.get("intensity_target_trimp",
+                               session["intensity_target_trimp"]),
+                    day,
+                    start_time=new_time or _parse_time(session.get("scheduled_time")),
+                )
+                gcal.patch_event(token, session["calendar_event_id"], {
+                    "summary": event["summary"],
+                    "description": event["description"],
+                    "start": event["start"], "end": event["end"],
+                })
+                calendar_synced = True
+            except Exception:
+                calendar_synced = False
+
+    return {"updated": True, "calendar_synced": calendar_synced,
+            "target_trimp": fields.get("intensity_target_trimp")}
+
+
 class CreateRequest(BaseModel):
     user_id: str
     scheduled_date: date_type
     scheduled_time: str | None = None
-    session_type: str
-    duration_minutes: int
+    # Séance simple :
+    session_type: str | None = None
+    duration_minutes: int | None = None
+    # Ou depuis un modèle structuré :
+    template_id: str | None = None
+    params: dict | None = None
+    # Ou constructeur libre (style Garmin) :
+    custom: dict | None = None  # {"title": ..., "steps": [...]}
+
+
+@router.get("/templates")
+def list_workout_templates() -> dict:
+    """Bibliothèque de séances structurées (paramètres personnalisables)."""
+    return {"templates": templates.list_templates()}
 
 
 @router.post("/create")
 def create(req: CreateRequest,
            repo: SupabaseRepo = Depends(get_repo)) -> dict:
-    if req.session_type not in VALID_TYPES:
-        raise HTTPException(status_code=422,
-                            detail=f"session_type doit être dans {VALID_TYPES}")
-    if not 10 <= req.duration_minutes <= 360:
-        raise HTTPException(status_code=422,
-                            detail="duration_minutes doit être entre 10 et 360")
-
     objective = repo.get_active_objective(req.user_id)
-    trimp = round(req.duration_minutes * TRIMP_PER_MIN[req.session_type])
-    row = {
-        "user_id": req.user_id,
-        "objective_id": objective["id"] if objective else None,
-        "scheduled_date": req.scheduled_date.isoformat(),
-        "session_type": req.session_type,
-        "duration_planned_minutes": req.duration_minutes,
-        "intensity_target_trimp": trimp,
-        "status": "PLANNED",
-    }
+
+    if req.custom:
+        # ---------------------------------------- constructeur libre
+        try:
+            built = templates.build_custom_workout(
+                req.custom.get("title", ""), req.custom.get("steps") or []
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        row = {
+            "user_id": req.user_id,
+            "objective_id": objective["id"] if objective else None,
+            "scheduled_date": req.scheduled_date.isoformat(),
+            "session_type": built["session_type"],
+            "title": built["title"],
+            "structure": built["structure"],
+            "duration_planned_minutes": built["duration_minutes"],
+            "intensity_target_trimp": built["target_trimp"],
+            "status": "PLANNED",
+        }
+        trimp = built["target_trimp"]
+    elif req.template_id:
+        # ------------------------------------------- séance structurée
+        try:
+            built = templates.build_from_template(req.template_id, req.params)
+        except KeyError:
+            raise HTTPException(status_code=404,
+                                detail=f"Modèle inconnu : {req.template_id}")
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        row = {
+            "user_id": req.user_id,
+            "objective_id": objective["id"] if objective else None,
+            "scheduled_date": req.scheduled_date.isoformat(),
+            "session_type": built["session_type"],
+            "title": built["title"],
+            "structure": built["structure"],
+            "duration_planned_minutes": built["duration_minutes"],
+            "intensity_target_trimp": built["target_trimp"],
+            "status": "PLANNED",
+        }
+        trimp = built["target_trimp"]
+    else:
+        # ------------------------------------------------ séance simple
+        if req.session_type not in VALID_TYPES:
+            raise HTTPException(status_code=422,
+                                detail=f"session_type doit être dans {VALID_TYPES}")
+        if req.duration_minutes is None or not 10 <= req.duration_minutes <= 360:
+            raise HTTPException(status_code=422,
+                                detail="duration_minutes doit être entre 10 et 360")
+        trimp = round(req.duration_minutes * TRIMP_PER_MIN[req.session_type])
+        row = {
+            "user_id": req.user_id,
+            "objective_id": objective["id"] if objective else None,
+            "scheduled_date": req.scheduled_date.isoformat(),
+            "session_type": req.session_type,
+            "duration_planned_minutes": req.duration_minutes,
+            "intensity_target_trimp": trimp,
+            "status": "PLANNED",
+        }
+
     t = _parse_time(req.scheduled_time)
     if t is not None:
         row["scheduled_time"] = t.isoformat()

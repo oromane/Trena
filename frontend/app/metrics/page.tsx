@@ -1,8 +1,14 @@
-import { RefreshCw, Watch } from 'lucide-react';
+import { Download, RefreshCw, TrendingUp, Watch } from 'lucide-react';
 import Nav from '@/components/Nav';
 import Footer from '@/components/Footer';
 import GarminLink from '@/components/GarminLink';
-import { saveDailyMetrics, syncGarmin, unlinkGarmin } from '@/app/actions';
+import TrendsChart from '@/components/TrendsChart';
+import {
+  importGarminActivities,
+  saveDailyMetrics,
+  syncGarmin,
+  unlinkGarmin,
+} from '@/app/actions';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { getGarminStatus } from '@/lib/engine';
 
@@ -19,8 +25,16 @@ const GARMIN_MESSAGES: Record<string, { text: string; ok: boolean }> = {
 function garminMessage(flag?: string) {
   if (!flag) return undefined;
   if (flag.startsWith('synced_')) {
-    const n = flag.slice('synced_'.length);
-    return { text: `Synchronisation terminée : ${n} jour(s) de données importés.`, ok: true };
+    const [days, acts] = flag.slice('synced_'.length).split('_');
+    const actsTxt = acts && Number(acts) > 0 ? ` et ${acts} activité(s)` : '';
+    return {
+      text: `Synchronisation terminée : ${days} jour(s) de données${actsTxt} importés.`,
+      ok: true,
+    };
+  }
+  if (flag.startsWith('imported_')) {
+    const n = flag.slice('imported_'.length);
+    return { text: `${n} activité(s) importée(s) avec leur TRIMP réel.`, ok: true };
   }
   return GARMIN_MESSAGES[flag];
 }
@@ -90,11 +104,17 @@ export default async function MetricsPage({
                   de séance.
                 </span>
               </p>
-              <div className="mt-4 flex items-center gap-4">
+              <div className="mt-4 flex flex-wrap items-center gap-4">
                 <form action={syncGarmin}>
                   <button className="inline-flex items-center gap-2 rounded-xl bg-ats-green px-4 py-2 text-sm font-semibold text-ats-bg transition-transform hover:scale-[1.02]">
                     <RefreshCw className="h-4 w-4" />
                     Synchroniser 14 jours
+                  </button>
+                </form>
+                <form action={importGarminActivities}>
+                  <button className="inline-flex items-center gap-2 rounded-xl bg-ats-card2 px-4 py-2 text-sm font-semibold transition-colors hover:bg-ats-gray/40">
+                    <Download className="h-4 w-4" />
+                    Importer 30 jours d&apos;activités
                   </button>
                 </form>
                 <form action={unlinkGarmin}>
@@ -103,10 +123,28 @@ export default async function MetricsPage({
                   </button>
                 </form>
               </div>
+              <p className="mt-3 text-[11px] leading-relaxed text-ats-gray">
+                La synchronisation récupère métriques quotidiennes, bien-être étendu
+                (poids, pas, VO2max, Body Battery...) et activités réalisées : chaque
+                course importée reçoit son TRIMP réel et passe la séance en « Réalisée ».
+              </p>
             </div>
           ) : (
             <GarminLink />
           )}
+        </section>
+
+        {/* -------------------------------------------------- tendances */}
+        <section className="card mt-4 p-6">
+          <div className="flex items-center gap-2 text-ats-muted">
+            <TrendingUp className="h-4 w-4" />
+            <span className="text-[11px] font-medium uppercase tracking-[0.2em]">
+              Tendances (90 jours)
+            </span>
+          </div>
+          <div className="mt-4">
+            <TrendsChart />
+          </div>
         </section>
 
         {/* -------------------------------------------------- saisie manuelle */}
@@ -126,7 +164,8 @@ export default async function MetricsPage({
         </section>
 
         {/* -------------------------------------------------- historique */}
-        <table className="mt-8 w-full text-sm">
+        <div className="mt-8 overflow-x-auto">
+        <table className="w-full min-w-[480px] text-sm">
           <thead>
             <tr className="border-b border-white/10 text-left text-ats-muted">
               <th className="py-2 font-medium">Date</th>
@@ -150,6 +189,7 @@ export default async function MetricsPage({
             ))}
           </tbody>
         </table>
+        </div>
       </main>
       <Footer />
     </>

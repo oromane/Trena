@@ -1,0 +1,7 @@
+tunnel: febb31d0-60d3-4e1e-8a24-f972361f37f8
+credentials-file: C:\Users\roman\.cloudflared\febb31d0-60d3-4e1e-8a24-f972361f37f8.json
+
+ingress:
+  - hostname: trena.nexolab.fr
+    service: http://localhost:3000
+  - service: http_status:404

@@ -74,12 +74,16 @@ Réponse : niveau de disponibilité (`NORMAL` / `CAUTION` / `REDUCE`), z-score H
 
 `POST /simulate` — trajectoire fitness/fatigue/performance (Banister) sur une série de charges TRIMP.
 
+`POST /plan/calibrate` — calibration individuelle des paramètres de Banister (tau1/tau2/k1/k2/p0) par régression sur l'historique réel (proxy VO2max Garmin). Garde-fous : ≥ 8 semaines de charges, ≥ 10 mesures VO2max, R² ≥ 0.2 — sinon les défauts du moteur restent en vigueur. Paramètres persistés dans `profiles` (voir `sql/migration-004.sql`) et utilisés par le cockpit et l'ajustement matinal.
+
 `POST /trimp` — score TRIMP d'une séance (durée, FC moyenne/repos/max, sexe).
 
 Routes internes (en-tête `X-Internal-Key` requis) : `POST /ingest/daily-metrics`, `POST /plan/generate`, `POST /daily-adjust/run`, `GET /users/active`, `POST /calendar/oauth/authorize-url`, `POST /calendar/oauth/exchange`, `GET /calendar/status`, `DELETE /calendar/tokens/{user_id}`, `POST /calendar/tokens`, `POST /calendar/publish`.
 
 ## État d'avancement
 
-Fait : moteur complet (Banister, TRIMP, HRV, périodisation, séances/semaine paramétrable), API interne sécurisée, persistance Supabase, cockpit de performance (probabilité, trajectoire projetée, insights, déroulé de séance), édition des séances (déplacer jour + heure, ajouter, supprimer, sync calendrier), Google Calendar complet (OAuth, publish, purge des doublons, patch matinal), sync Garmin Connect automatique (MFA 2 étapes, jeton chiffré), page Profil (nom, email, mot de passe, export JSON), thème clair/sombre, workflow n8n.
+Fait (v0.5) : moteur complet (Banister, TRIMP, HRV, périodisation, séances/semaine paramétrable), import automatique des activités Garmin (TRIMP réel, matching des séances planifiées, activités hors plan), bien-être Garmin étendu (poids, pas, VO2max, Body Battery, calories) avec tendances 90 jours, bibliothèque de séances structurées paramétrables (30/30, intervalles piste, pyramide, fartlek, tempo progressif, sortie longue à blocs, côtes), calendrier multi-vues (1 jour / 3 jours / semaine / mois) avec édition complète, cockpit de performance, Google Calendar complet (OAuth, publish, purge, patch matinal), sync Garmin MFA 2 étapes, page Profil (identité, paramètres cardiaques, email, mot de passe, export JSON), thème clair/sombre, workflow n8n. Suite de tests : 97 pytest.
 
-Reste : calibration individuelle de tau1/tau2 par régression sur l'historique, import des activités réalisées (TRIMP auto depuis Garmin), déploiement VPS.
+Fait (v0.7) : calibration individuelle de tau1/tau2 par régression sur l'historique (`POST /plan/calibrate`, migration-004), détection de monotonie/contrainte de Foster (bloc `foster` du dashboard + insights de prévention du surentraînement), CI GitHub Actions (pytest backend + tsc frontend à chaque push). Suite de tests : 126 pytest.
+
+Reste : notifications matinales (n8n), allures personnalisées dans le déroulé des séances, mode course J-7.

@@ -129,6 +129,28 @@ export async function getDashboardSummary(userId: string): Promise<DashboardSumm
   }
 }
 
+export interface WorkoutTemplate {
+  id: string;
+  name: string;
+  session_type: string;
+  description: string;
+  params: { key: string; label: string; default: number; min: number; max: number }[];
+}
+
+/** Bibliothèque de séances structurées (modèles paramétrables). */
+export async function getWorkoutTemplates(): Promise<WorkoutTemplate[]> {
+  try {
+    const res = await fetch(`${ENGINE_URL}/sessions/templates`, {
+      headers: { 'X-Internal-Key': INTERNAL_KEY },
+      cache: 'no-store',
+    });
+    if (!res.ok) return [];
+    return (await res.json()).templates ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export interface CalendarStatus {
   linked: boolean;
   expires_at?: string;

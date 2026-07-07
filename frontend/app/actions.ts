@@ -154,15 +154,61 @@ export async function rescheduleSession(formData: FormData) {
 
 export async function createSession(formData: FormData) {
   const { user } = await requireUser();
-  await engineFetch('/sessions/create', {
+  const templateId = formData.get('template_id');
+  const customJson = formData.get('custom_workout');
+  const base = {
     user_id: user.id,
     scheduled_date: String(formData.get('scheduled_date')),
     scheduled_time: formData.get('scheduled_time')
       ? String(formData.get('scheduled_time'))
       : null,
-    session_type: String(formData.get('session_type')),
-    duration_minutes: Number(formData.get('duration_minutes')),
-  });
+  };
+  if (customJson) {
+    // Constructeur libre : titre + étapes sérialisés par le client
+    await engineFetch('/sessions/create', {
+      ...base,
+      custom: JSON.parse(String(customJson)),
+    });
+  } else if (templateId) {
+    // Séance structurée depuis un modèle : collecte des param_<clé>
+    const params: Record<string, number> = {};
+    for (const [key, value] of formData.entries()) {
+      if (key.startsWith('param_')) params[key.slice(6)] = Number(value);
+    }
+    await engineFetch('/sessions/create', {
+      ...base,
+      template_id: String(templateId),
+      params,
+    });
+  } else {
+    await engineFetch('/sessions/create', {
+      ...base,
+      session_type: String(formData.get('session_type')),
+      duration_minutes: Number(formData.get('duration_minutes')),
+    });
+  }
+  revalidatePath('/dashboard');
+}
+
+/** Personnalise une séance : planification, type/durée/titre, ou constructeur. */
+export async function updateSession(formData: FormData) {
+  const { user } = await requireUser();
+  const customJson = formData.get('custom_workout');
+  const body: Record<string, unknown> = {
+    user_id: user.id,
+    session_id: String(formData.get('session_id')),
+  };
+  if (formData.get('new_date')) body.scheduled_date = String(formData.get('new_date'));
+  if (formData.get('new_time')) body.scheduled_time = String(formData.get('new_time'));
+  if (customJson) {
+    body.custom = JSON.parse(String(customJson));
+  } else {
+    if (formData.get('session_type')) body.session_type = String(formData.get('session_type'));
+    if (formData.get('duration_minutes'))
+      body.duration_minutes = Number(formData.get('duration_minutes'));
+    if (formData.get('title') !== null) body.title = String(formData.get('title'));
+  }
+  await engineFetch('/sessions/update', body);
   revalidatePath('/dashboard');
 }
 
@@ -188,9 +234,21 @@ export async function updateProfile(formData: FormData) {
     })
     .eq('id', user.id);
   if (error) throw new Error(error.message);
+
+  // Le nombre de séances/semaine ne vaut que si le plan est régénéré :
+  // on le fait automatiquement (best effort, silencieux sans objectif actif).
+  let flag = 'profile_saved';
+  if (formData.get('sessions_per_week')) {
+    try {
+      await engineFetch('/plan/generate', { user_id: user.id, persist: true });
+      flag = 'profile_saved_plan';
+    } catch {
+      flag = 'profile_saved_noplan';
+    }
+  }
   revalidatePath('/profile');
   revalidatePath('/dashboard');
-  redirect('/profile?status=profile_saved');
+  redirect(`/profile?status=${flag}`);
 }
 
 export async function updateEmail(formData: FormData) {
@@ -224,19 +282,54 @@ export async function unlinkGarmin() {
   redirect('/metrics?garmin=unlinked');
 }
 
-/** Synchronise les 14 derniers jours depuis Garmin Connect. */
+/** Synchronise les 14 derniers jours depuis Garmin Connect (métriques + bien-être + activités). */
 export async function syncGarmin() {
   const { user } = await requireUser();
   let flag = 'sync_error';
   try {
     const r = await engineFetch('/garmin/sync', { user_id: user.id, days: 14 });
-    flag = `synced_${r.days_with_data ?? 0}`;
+    const acts = r.activities?.imported ?? 0;
+    flag = `synced_${r.days_with_data ?? 0}_${acts}`;
   } catch (e) {
     console.error('garmin sync failed:', e);
   }
   revalidatePath('/metrics');
   revalidatePath('/dashboard');
   redirect(`/metrics?garmin=${flag}`);
+}
+
+/** Importe les activités réalisées des 30 derniers jours (TRIMP réel). */
+export async function importGarminActivities() {
+  const { user } = await requireUser();
+  let flag = 'sync_error';
+  try {
+    const r = await engineFetch('/garmin/import-activities', {
+      user_id: user.id,
+      days: 30,
+    });
+    flag = `imported_${r.imported ?? 0}`;
+  } catch (e) {
+    console.error('garmin import failed:', e);
+  }
+  revalidatePath('/metrics');
+  revalidatePath('/dashboard');
+  redirect(`/metrics?garmin=${flag}`);
+}
+
+/** Paramètres cardiaques du profil (TRIMP réel : FC max, FC repos, sexe). */
+export async function updateHeartProfile(formData: FormData) {
+  const { supabase, user } = await requireUser();
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      hr_max: formData.get('hr_max') ? Number(formData.get('hr_max')) : null,
+      hr_rest: formData.get('hr_rest') ? Number(formData.get('hr_rest')) : null,
+      sex: formData.get('sex') ? String(formData.get('sex')) : null,
+    })
+    .eq('id', user.id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/profile');
+  redirect('/profile?status=profile_saved');
 }
 
 export async function signOut() {
