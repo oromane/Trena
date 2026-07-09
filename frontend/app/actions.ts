@@ -50,6 +50,9 @@ export async function createObjective(formData: FormData) {
     target_time_seconds: formData.get('target_time_minutes')
       ? Number(formData.get('target_time_minutes')) * 60
       : null,
+    distance_m: formData.get('distance_km')
+      ? Math.round(Number(formData.get('distance_km')) * 1000)
+      : null,
     is_active: true,
   });
   if (error) throw new Error(error.message);

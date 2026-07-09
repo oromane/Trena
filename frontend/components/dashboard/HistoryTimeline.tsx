@@ -89,6 +89,38 @@ export default function HistoryTimeline({
                         </>
                       )}
                     </p>
+                    {s.comparison?.actual_pace && (
+                      <p className="metric mt-0.5 text-[11px] text-ats-muted">
+                        allure {s.comparison.actual_pace}
+                        {s.comparison.target_pace && (
+                          <>
+                            {' '}
+                            <span className="text-ats-gray">
+                              (cible {s.comparison.target_pace}
+                              {s.comparison.pace_delta_s != null && (
+                                <>
+                                  ,{' '}
+                                  <span
+                                    className={
+                                      Math.abs(s.comparison.pace_delta_s) <= 10
+                                        ? 'text-ats-green'
+                                        : s.comparison.pace_delta_s > 0
+                                          ? 'text-ats-orange'
+                                          : 'text-ats-blue'
+                                    }
+                                  >
+                                    {s.comparison.pace_delta_s > 0 ? '+' : ''}
+                                    {Math.round(s.comparison.pace_delta_s)} s/km
+                                  </span>
+                                </>
+                              )}
+                              )
+                            </span>
+                          </>
+                        )}
+                        {s.comparison.avg_hr && <> · FC moy {s.comparison.avg_hr} bpm</>}
+                      </p>
+                    )}
                   </div>
                   {trimpDelta != null && (
                     <span

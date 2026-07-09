@@ -55,7 +55,15 @@ export default async function ObjectivesPage() {
             type="number"
             min="1"
             placeholder="Temps cible (minutes, optionnel)"
-            className={`${INPUT_CLS} sm:col-span-2`}
+            className={INPUT_CLS}
+          />
+          <input
+            name="distance_km"
+            type="number"
+            min="0.5"
+            step="0.1"
+            placeholder="Distance (km, ex : 42.2 — optionnel)"
+            className={INPUT_CLS}
           />
           <button className="rounded-xl bg-ats-green py-2 text-sm font-semibold text-ats-bg transition-transform hover:scale-[1.01] sm:col-span-2">
             Créer l&apos;objectif

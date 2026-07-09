@@ -51,6 +51,18 @@ export interface WeekDay {
   }[];
 }
 
+export interface SessionComparison {
+  actual_pace_s_per_km?: number;
+  actual_pace?: string;
+  target_pace_s_per_km?: number;
+  target_pace?: string;
+  pace_delta_s?: number;
+  target_trimp?: number;
+  actual_trimp?: number;
+  trimp_delta?: number;
+  avg_hr?: number;
+}
+
 export interface SessionRow {
   id: string;
   scheduled_date: string;
@@ -61,11 +73,38 @@ export interface SessionRow {
   status: string;
   duration_actual_minutes: number | null;
   trimp_actual: number | null;
+  distance_m?: number | null;
+  avg_hr?: number | null;
+  comparison?: SessionComparison | null;
+}
+
+export interface ZonePace {
+  zone: number;
+  label: string;
+  pace_s_per_km: number;
+  pace: string;
+}
+
+export interface PacesPayload {
+  distance_m: number;
+  race: { pace_s_per_km: number; pace: string };
+  zones: ZonePace[];
 }
 
 export interface Workout {
   blocks: { label: string; detail: string }[];
   focus: string;
+  pace_hint?: string;
+  paces?: PacesPayload;
+}
+
+export interface RaceWeek {
+  days_remaining: number;
+  title: string;
+  target_date: string;
+  race_pace: { pace_s_per_km: number; pace: string } | null;
+  checklist: { days_before: number; label: string; done_window: boolean }[];
+  reminders: { nutrition: string; sommeil: string; hydratation: string };
 }
 
 export interface DashboardSummary {
@@ -77,6 +116,8 @@ export interface DashboardSummary {
     target_time_seconds: number | null;
     days_remaining: number;
   } | null;
+  paces?: PacesPayload | null;
+  race_week?: RaceWeek | null;
   readiness: { level: 'NORMAL' | 'CAUTION' | 'REDUCE'; hrv_zscore: number | null; detail: string };
   today_session: SessionRow | null;
   workout: Workout | null;

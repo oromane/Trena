@@ -139,6 +139,37 @@ export default function SessionCard({
           <p className="mt-3 border-t border-white/5 pt-2.5 text-[12px] italic leading-relaxed text-ats-muted">
             {workout.focus}
           </p>
+
+          {workout.pace_hint && (
+            <p className="mt-2 text-[12px] text-ats-text/90">
+              <span className="text-ats-muted">Allure cible : </span>
+              <span className="metric font-semibold" style={{ color: meta.color }}>
+                {workout.pace_hint}
+              </span>
+            </p>
+          )}
+
+          {workout.paces && (
+            <div className="mt-3 border-t border-white/5 pt-2.5">
+              <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-ats-muted">
+                Allures personnalisées
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-[12px] sm:grid-cols-3">
+                {workout.paces.zones.map((zp) => (
+                  <div key={zp.zone} className="flex items-center justify-between gap-2">
+                    <span className="text-ats-muted">{zp.label}</span>
+                    <span className="metric font-medium text-ats-text/90">{zp.pace}</span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-ats-muted">Allure course</span>
+                  <span className="metric font-semibold text-ats-green">
+                    {workout.paces.race.pace}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

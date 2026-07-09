@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from ..config import settings
 from ..db.repo import SupabaseRepo, get_repo
-from ..engine import banister, calibration, foster, hrv, insights, workout
+from ..engine import banister, calibration, foster, hrv, insights, paces, workout
 from ..security import require_internal_key
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"],
@@ -41,6 +41,76 @@ def _metric_block(today_val, series: list[float]) -> dict | None:
     }
 
 
+def _session_comparison(s: dict, paces_payload: dict | None) -> dict | None:
+    """Écart prévu/réalisé enrichi : allure et FC, pas seulement le TRIMP."""
+    if s.get("status") != "COMPLETED":
+        return None
+    dist = s.get("distance_m")
+    dur = s.get("duration_actual_minutes")
+    comp: dict = {}
+
+    # Allure réelle vs allure cible de la zone dominante de la séance.
+    if dist and dur and dist > 0:
+        actual_pace = (dur * 60.0) / (dist / 1000.0)
+        comp["actual_pace_s_per_km"] = round(actual_pace, 1)
+        comp["actual_pace"] = paces.format_pace(actual_pace)
+        if paces_payload:
+            z = paces.session_zone(s["session_type"])
+            target = next((p["pace_s_per_km"] for p in paces_payload["zones"]
+                           if p["zone"] == z), None)
+            if target:
+                comp["target_pace_s_per_km"] = target
+                comp["target_pace"] = paces.format_pace(target)
+                comp["pace_delta_s"] = round(actual_pace - target, 1)
+
+    # TRIMP prévu/réalisé.
+    if s.get("trimp_actual") is not None and s.get("intensity_target_trimp"):
+        comp["target_trimp"] = s["intensity_target_trimp"]
+        comp["actual_trimp"] = s["trimp_actual"]
+        comp["trimp_delta"] = s["trimp_actual"] - s["intensity_target_trimp"]
+
+    # FC moyenne réelle.
+    if s.get("avg_hr"):
+        comp["avg_hr"] = s["avg_hr"]
+
+    return comp or None
+
+
+# Checklist d'affûtage de la semaine de course (J-7 → J-0).
+_RACE_WEEK_CHECKLIST = [
+    {"days_before": 7, "label": "Réduire le volume de 40-50 %, garder un peu d'intensité courte pour rester affûté."},
+    {"days_before": 4, "label": "Dernière séance qualité légère (quelques accélérations à l'allure course)."},
+    {"days_before": 3, "label": "Augmenter progressivement les glucides (recharge), soigner l'hydratation."},
+    {"days_before": 2, "label": "Repos ou footing très court. Préparer dossard, chaussures, tenue, ravitaillement."},
+    {"days_before": 1, "label": "Repos complet ou 15-20 min relâché. Repas connu, coucher tôt, réveil calé."},
+    {"days_before": 0, "label": "Petit-déjeuner testé 3h avant, échauffement progressif, partir à l'allure cible — pas plus vite."},
+]
+
+
+def _race_week_block(obj_block: dict | None, paces_payload: dict | None) -> dict | None:
+    """Bloc « mode course » activé dans les 7 derniers jours avant l'objectif."""
+    if not obj_block:
+        return None
+    dr = obj_block.get("days_remaining")
+    if dr is None or not 0 <= dr <= 7:
+        return None
+    return {
+        "days_remaining": dr,
+        "title": obj_block["title"],
+        "target_date": obj_block["target_date"],
+        "race_pace": (paces_payload or {}).get("race"),
+        "checklist": [
+            {**item, "done_window": item["days_before"] >= dr}
+            for item in _RACE_WEEK_CHECKLIST
+        ],
+        "reminders": {
+            "nutrition": "Recharge glucidique J-3 → J-1, rien de nouveau le jour J.",
+            "sommeil": "Le sommeil J-2 compte plus que celui de la veille : couche-toi tôt dès J-3.",
+            "hydratation": "Bois régulièrement, urines claires. Électrolytes si chaleur.",
+        },
+    }
+
+
 @router.post("/summary")
 def summary(req: SummaryRequest,
             repo: SupabaseRepo = Depends(get_repo)) -> dict:
@@ -59,6 +129,9 @@ def summary(req: SummaryRequest,
             "target_time_seconds": objective.get("target_time_seconds"),
             "days_remaining": (target_date - today).days,
         }
+
+    # Allures d'entraînement personnalisées (temps cible + distance).
+    paces_payload = paces.training_paces(objective)
 
     # ------------------------------------------------------------- métriques
     metrics = repo.get_metrics_history(req.user_id, days=28, until=today)
@@ -217,6 +290,11 @@ def summary(req: SummaryRequest,
         (s for s in sessions if s_date(s) <= today),
         key=lambda s: s["scheduled_date"], reverse=True,
     )[:10]
+    # Comparaison prévu/réalisé enrichie (allure + FC) sur chaque séance passée.
+    past_sessions = [
+        {**s, "comparison": _session_comparison(s, paces_payload)}
+        for s in past_sessions
+    ]
 
     # -------------------------------------------------------------- semaine
     week_days = []
@@ -234,23 +312,35 @@ def summary(req: SummaryRequest,
             } for s in ss],
         })
 
+    # Déroulé de la séance du jour + allures cibles injectées.
+    workout_payload = None
+    if today_session:
+        workout_payload = dict(
+            today_session.get("structure")
+            or workout.describe_session(
+                today_session["session_type"],
+                today_session["duration_planned_minutes"],
+            )
+        )
+        if paces_payload:
+            hint = paces.session_pace_hint(
+                today_session["session_type"], objective)
+            if hint:
+                workout_payload["pace_hint"] = hint
+            workout_payload["paces"] = paces_payload
+
     return {
         "date": today.isoformat(),
         "objective": obj_block,
+        "paces": paces_payload,
+        "race_week": _race_week_block(obj_block, paces_payload),
         "readiness": {
             "level": readiness_level,
             "hrv_zscore": z,
             "detail": readiness_detail,
         },
         "today_session": today_session,
-        "workout": (
-            # Structure personnalisée (modèle) prioritaire sur le déroulé générique
-            today_session.get("structure")
-            or workout.describe_session(
-                today_session["session_type"],
-                today_session["duration_planned_minutes"],
-            )
-        ) if today_session else None,
+        "workout": workout_payload,
         "physio": physio,
         "probability": {
             "value": prob.value,

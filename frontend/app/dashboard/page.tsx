@@ -10,6 +10,7 @@ import CalendarView from '@/components/dashboard/CalendarView';
 import LoadChart from '@/components/dashboard/LoadChart';
 import HistoryTimeline from '@/components/dashboard/HistoryTimeline';
 import InsightsCard from '@/components/dashboard/InsightsCard';
+import RaceWeekCard from '@/components/dashboard/RaceWeekCard';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { ensureProfile } from '@/app/actions';
 import {
@@ -122,6 +123,14 @@ export default async function DashboardPage({
         />
 
         <div className="mx-auto max-w-6xl space-y-12 px-6">
+          {/* MODE COURSE (J-7 → J-0) */}
+          {summary.race_week && (
+            <section>
+              <SectionLabel>Semaine de course</SectionLabel>
+              <RaceWeekCard race={summary.race_week} />
+            </section>
+          )}
+
           {/* ÉTAT PHYSIOLOGIQUE */}
           <section>
             <SectionLabel>État physiologique</SectionLabel>
