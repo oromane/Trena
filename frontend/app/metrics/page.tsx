@@ -3,6 +3,7 @@ import Nav from '@/components/Nav';
 import Footer from '@/components/Footer';
 import GarminLink from '@/components/GarminLink';
 import TrendsChart from '@/components/TrendsChart';
+import SubmitButton from '@/components/SubmitButton';
 import {
   importGarminActivities,
   saveDailyMetrics,
@@ -106,16 +107,16 @@ export default async function MetricsPage({
               </p>
               <div className="mt-4 flex flex-wrap items-center gap-4">
                 <form action={syncGarmin}>
-                  <button className="inline-flex items-center gap-2 rounded-xl bg-ats-green px-4 py-2 text-sm font-semibold text-ats-bg transition-transform hover:scale-[1.02]">
+                  <SubmitButton className="inline-flex items-center gap-2 rounded-xl bg-ats-green px-4 py-2 text-sm font-semibold text-ats-bg transition-transform hover:scale-[1.02] disabled:opacity-60">
                     <RefreshCw className="h-4 w-4" />
                     Synchroniser 14 jours
-                  </button>
+                  </SubmitButton>
                 </form>
                 <form action={importGarminActivities}>
-                  <button className="inline-flex items-center gap-2 rounded-xl bg-ats-card2 px-4 py-2 text-sm font-semibold transition-colors hover:bg-ats-gray/40">
+                  <SubmitButton className="inline-flex items-center gap-2 rounded-xl bg-ats-card2 px-4 py-2 text-sm font-semibold transition-colors hover:bg-ats-gray/40 disabled:opacity-60">
                     <Download className="h-4 w-4" />
                     Importer 30 jours d&apos;activités
-                  </button>
+                  </SubmitButton>
                 </form>
                 <form action={unlinkGarmin}>
                   <button className="text-xs text-ats-gray hover:text-ats-muted">

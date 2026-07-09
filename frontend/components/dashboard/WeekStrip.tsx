@@ -9,6 +9,7 @@ import { CalendarCheck2, CalendarPlus, Plus, Trash2, X } from 'lucide-react';
 import { useState, useTransition } from 'react';
 import type { DashboardSummary } from '@/lib/engine';
 import { fmtDurationShort } from '@/lib/format';
+import Spinner from '@/components/Spinner';
 import {
   createSession,
   deleteSession,
@@ -169,7 +170,7 @@ export default function WeekStrip({
                 disabled={pending}
                 className="rounded-lg bg-ats-green px-4 py-2 text-xs font-semibold text-ats-bg disabled:opacity-50"
               >
-                {pending ? '…' : 'Déplacer'}
+                {pending ? <Spinner className="mx-auto h-4 w-4" /> :'Déplacer'}
               </button>
               <button
                 type="button"
@@ -229,7 +230,7 @@ export default function WeekStrip({
                 disabled={pending}
                 className="rounded-lg bg-ats-green px-4 py-2 text-xs font-semibold text-ats-bg disabled:opacity-50"
               >
-                {pending ? '…' : 'Ajouter'}
+                {pending ? <Spinner className="mx-auto h-4 w-4" /> :'Ajouter'}
               </button>
             </form>
           )}

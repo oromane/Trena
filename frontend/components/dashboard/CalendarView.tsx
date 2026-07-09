@@ -32,6 +32,7 @@ import {
   updateSession,
 } from '@/app/actions';
 import type { LibraryItem } from '@/lib/engine';
+import Spinner from '@/components/Spinner';
 
 const TYPE_COLOR: Record<string, string> = {
   INTERVAL: '#FF4500',
@@ -620,7 +621,7 @@ export default function CalendarView({
                   </button>
                   <button disabled={pending}
                           className="ml-auto rounded-lg bg-ats-green px-4 py-2 text-xs font-semibold text-ats-bg disabled:opacity-50">
-                    {pending ? '…' : 'Remplacer le contenu de la séance'}
+                    {pending ? <Spinner className="mx-auto h-4 w-4" /> :'Remplacer le contenu de la séance'}
                   </button>
                 </div>
               </form>
@@ -666,7 +667,7 @@ export default function CalendarView({
               </label>
               <button disabled={pending}
                       className="rounded-lg bg-ats-green px-4 py-2 text-xs font-semibold text-ats-bg disabled:opacity-50">
-                {pending ? '…' : 'Enregistrer'}
+                {pending ? <Spinner className="mx-auto h-4 w-4" /> :'Enregistrer'}
               </button>
               <button type="button" onClick={() => setEditCustom(true)}
                       className="rounded-lg bg-ats-violet/10 px-3 py-2 text-xs font-semibold text-ats-violet hover:bg-ats-violet/20">
@@ -797,7 +798,7 @@ export default function CalendarView({
                     </button>
                     <button disabled={pending}
                             className="rounded-lg bg-ats-green px-4 py-2 text-xs font-semibold text-ats-bg disabled:opacity-50">
-                      {pending ? '…' : 'Ajouter au plan'}
+                      {pending ? <Spinner className="mx-auto h-4 w-4" /> :'Ajouter au plan'}
                     </button>
                   </div>
                 </div>
@@ -830,7 +831,7 @@ export default function CalendarView({
                   </label>
                   <button disabled={pending}
                           className="rounded-lg bg-ats-green px-4 py-2 text-xs font-semibold text-ats-bg disabled:opacity-50">
-                    {pending ? '…' : 'Ajouter'}
+                    {pending ? <Spinner className="mx-auto h-4 w-4" /> :'Ajouter'}
                   </button>
                   <p className="w-full text-[10px] text-ats-gray">
                     {selectedTemplate.description}
@@ -860,7 +861,7 @@ export default function CalendarView({
                   </label>
                   <button disabled={pending}
                           className="rounded-lg bg-ats-green px-4 py-2 text-xs font-semibold text-ats-bg disabled:opacity-50">
-                    {pending ? '…' : 'Ajouter'}
+                    {pending ? <Spinner className="mx-auto h-4 w-4" /> :'Ajouter'}
                   </button>
                 </div>
               )}

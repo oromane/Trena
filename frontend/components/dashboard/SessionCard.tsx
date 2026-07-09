@@ -6,6 +6,7 @@ import { ArrowRight, CheckCircle2, Flame, ListChecks, Timer } from 'lucide-react
 import type { DashboardSummary } from '@/lib/engine';
 import { fmtDuration } from '@/lib/format';
 import { completeSession, runDailyAdjust } from '@/app/actions';
+import SubmitButton from '@/components/SubmitButton';
 
 const TYPE_META: Record<string, { label: string; color: string; goal: string }> = {
   INTERVAL: {
@@ -203,23 +204,23 @@ export default function SessionCard({
             <form action={completeSession}>
               <input type="hidden" name="session_id" value={session.id} />
               <input type="hidden" name="done" value="false" />
-              <button className="inline-flex items-center gap-1.5 rounded-xl border border-ats-green/40 bg-ats-green/10 px-4 py-2.5 text-sm font-semibold text-ats-green transition-colors hover:bg-ats-green/20">
+              <SubmitButton className="inline-flex items-center gap-1.5 rounded-xl border border-ats-green/40 bg-ats-green/10 px-4 py-2.5 text-sm font-semibold text-ats-green transition-colors hover:bg-ats-green/20 disabled:opacity-60">
                 <CheckCircle2 className="h-4 w-4" /> Faite — annuler
-              </button>
+              </SubmitButton>
             </form>
           ) : (
             <form action={completeSession}>
               <input type="hidden" name="session_id" value={session.id} />
-              <button className="inline-flex items-center gap-1.5 rounded-xl bg-ats-green px-4 py-2.5 text-sm font-semibold text-ats-bg transition-transform hover:scale-[1.02] active:scale-[0.98]">
+              <SubmitButton className="inline-flex items-center gap-1.5 rounded-xl bg-ats-green px-4 py-2.5 text-sm font-semibold text-ats-bg transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60">
                 <CheckCircle2 className="h-4 w-4" /> Marquer comme faite
-              </button>
+              </SubmitButton>
             </form>
           )}
           <form action={runDailyAdjust}>
-            <button className="group inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-ats-text/90 transition-colors hover:bg-white/5">
+            <SubmitButton className="group inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-ats-text/90 transition-colors hover:bg-white/5 disabled:opacity-60">
               Réévaluer
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </button>
+            </SubmitButton>
           </form>
         </div>
       </div>

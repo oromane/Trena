@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Activity, LineChart, ShieldCheck } from 'lucide-react';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
 import { LogoMark } from '@/components/Logo';
+import Spinner from '@/components/Spinner';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -123,9 +124,10 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-ats-green py-3 text-sm font-semibold text-ats-bg transition-transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-ats-green py-3 text-sm font-semibold text-ats-bg transition-transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
             >
-              {loading ? '…' : mode === 'signin' ? 'Se connecter' : 'Créer le compte'}
+              {loading && <Spinner className="h-4 w-4" />}
+              {mode === 'signin' ? 'Se connecter' : 'Créer le compte'}
             </button>
           </form>
 
