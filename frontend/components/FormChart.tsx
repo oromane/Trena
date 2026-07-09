@@ -31,8 +31,8 @@ export default function FormChart({ data }: { data: FormPoint[] }) {
         <YAxis stroke="#64748b" fontSize={11} />
         <Tooltip
           contentStyle={{
-            backgroundColor: '#0f172a',
-            border: '1px solid #334155',
+            backgroundColor: '#385E5E',
+            border: '1px solid #436D6D',
             borderRadius: 8,
             fontSize: 12,
           }}

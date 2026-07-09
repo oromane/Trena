@@ -104,14 +104,14 @@ export default function TrendsChart() {
                   <stop offset="100%" stopColor={selected.color} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid stroke="#334155" strokeDasharray="3 3" vertical={false} />
+              <CartesianGrid stroke="#436D6D" strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="date" tick={{ fill: '#94A3B8', fontSize: 10 }}
-                     tickLine={false} axisLine={{ stroke: '#334155' }} minTickGap={30} />
+                     tickLine={false} axisLine={{ stroke: '#436D6D' }} minTickGap={30} />
               <YAxis tick={{ fill: '#94A3B8', fontSize: 10 }} tickLine={false}
                      axisLine={false} domain={['auto', 'auto']} />
               <Tooltip
                 contentStyle={{
-                  background: '#1E293B',
+                  background: '#385E5E',
                   border: '1px solid rgba(255,255,255,0.08)',
                   borderRadius: 12,
                   fontSize: 12,

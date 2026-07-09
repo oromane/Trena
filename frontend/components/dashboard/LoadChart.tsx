@@ -41,18 +41,18 @@ export default function LoadChart({
     <div className="h-56 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -18 }} barGap={2}>
-          <CartesianGrid stroke="#334155" strokeDasharray="3 3" vertical={false} />
+          <CartesianGrid stroke="#436D6D" strokeDasharray="3 3" vertical={false} />
           <XAxis
             dataKey="week"
             tick={{ fill: '#94A3B8', fontSize: 10 }}
             tickLine={false}
-            axisLine={{ stroke: '#334155' }}
+            axisLine={{ stroke: '#436D6D' }}
           />
           <YAxis tick={{ fill: '#94A3B8', fontSize: 10 }} tickLine={false} axisLine={false} />
           <Tooltip
             cursor={{ fill: 'rgba(255,255,255,0.03)' }}
             contentStyle={{
-              background: '#1E293B',
+              background: '#385E5E',
               border: '1px solid rgba(255,255,255,0.08)',
               borderRadius: 12,
               fontSize: 12,
@@ -60,7 +60,7 @@ export default function LoadChart({
             labelStyle={{ color: '#94A3B8' }}
           />
           <Legend wrapperStyle={{ fontSize: 11, color: '#94A3B8' }} />
-          <Bar dataKey="prévu" fill="#334155" radius={[4, 4, 0, 0]} maxBarSize={26} />
+          <Bar dataKey="prévu" fill="#436D6D" radius={[4, 4, 0, 0]} maxBarSize={26} />
           <Bar dataKey="réalisé" fill="#2E8B57" radius={[4, 4, 0, 0]} maxBarSize={26} />
         </BarChart>
       </ResponsiveContainer>

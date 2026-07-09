@@ -60,12 +60,12 @@ export default function TrajectoryChart({
               <stop offset="100%" stopColor="#CBD5E1" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid stroke="#334155" strokeDasharray="3 3" vertical={false} />
+          <CartesianGrid stroke="#436D6D" strokeDasharray="3 3" vertical={false} />
           <XAxis
             dataKey="label"
             tick={{ fill: '#94A3B8', fontSize: 10 }}
             tickLine={false}
-            axisLine={{ stroke: '#334155' }}
+            axisLine={{ stroke: '#436D6D' }}
             minTickGap={40}
           />
           <YAxis
@@ -75,7 +75,7 @@ export default function TrajectoryChart({
           />
           <Tooltip
             contentStyle={{
-              background: '#1E293B',
+              background: '#385E5E',
               border: '1px solid rgba(255,255,255,0.08)',
               borderRadius: 12,
               fontSize: 12,

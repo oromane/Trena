@@ -37,7 +37,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  themeColor: '#0F172A',
+  themeColor: '#1A2B2B',
 };
 
 // Thème avant hydratation (anti-flash) + enregistrement du service worker (PWA)

@@ -147,7 +147,7 @@ export default function Hero({
               cy={RING.size / 2}
               r={RING.r}
               fill="none"
-              stroke="#334155"
+              stroke="#436D6D"
               strokeWidth={RING.stroke}
             />
             <motion.circle

@@ -5,24 +5,24 @@
 /* ============================ Thèmes Trena ============================ */
 :root {
   /* ---- Sombre (défaut) — Palette « Cartographie / Outdoor » ----
-     Fond ardoise (slate) pour un cockpit de données sobre, accents
-     vert forêt (aptitude/assimilation) et orange électrique (fatigue/alerte).
-     Valeurs RGB pour les modificateurs d'opacité Tailwind. */
-  --ats-bg: 15 23 42;        /* #0F172A slate-900 */
-  --ats-bg2: 30 41 59;       /* #1E293B slate-800 */
-  --ats-card: 30 41 59;      /* #1E293B slate-800 */
-  --ats-card2: 51 65 85;     /* #334155 slate-700 */
-  --ats-text: 241 245 249;   /* #F1F5F9 slate-100 */
-  --ats-muted: 148 163 184;  /* #94A3B8 slate-400 */
-  --ats-green: 46 139 87;    /* #2E8B57 vert forêt — fitness / NORMAL / Z1-Z2 */
+     Fond Gris Ardoise (teal-gris #2F4F4F), et non un slate bleuté, pour un
+     cockpit chaud et sobre ; accents vert forêt (aptitude) et orange
+     électrique (fatigue/alerte). Valeurs RGB pour l'opacité Tailwind. */
+  --ats-bg: 47 79 79;        /* #2F4F4F Gris Ardoise — Fond Principal */
+  --ats-bg2: 40 68 68;       /* #284444 surfaces en creux (inputs) */
+  --ats-card: 56 94 94;      /* #385E5E cartes (légèrement plus claires) */
+  --ats-card2: 67 109 109;   /* #436D6D cartes imbriquées */
+  --ats-text: 255 255 255;   /* #FFFFFF blanc pur */
+  --ats-muted: 190 208 208;  /* #BED0D0 gris-teal clair lisible */
+  --ats-green: 46 139 87;    /* #2E8B57 vert forêt — Primaire (fitness/NORMAL/Z1-Z2) */
   --ats-greendark: 33 110 68;/* #216E44 */
   --ats-blue: 79 134 168;    /* #4F86A8 bleu acier — endurance aérobie */
-  --ats-orange: 255 69 0;    /* #FF4500 orange électrique — fatigue / CAUTION / Z4-Z5 */
+  --ats-orange: 255 69 0;    /* #FF4500 orange électrique — Secondaire (fatigue/CAUTION/Z4-Z5) */
   --ats-red: 220 68 55;      /* #DC4437 rouge brique — MISSED / suppression */
   --ats-violet: 124 111 168; /* #7C6FA8 violet montagne — tempo / seuil */
-  --ats-gray: 100 116 139;   /* #64748B slate-500 */
-  --ats-border: rgba(148, 163, 184, 0.14);
-  --ats-chart-grid: #334155;
+  --ats-gray: 138 165 165;   /* #8AA5A5 gris-teal moyen */
+  --ats-border: rgba(255, 255, 255, 0.13);
+  --ats-chart-grid: #436D6D;
 }
 
 [data-theme='light'] {
