@@ -1,7 +1,7 @@
 /**
  * Objectif — course, temps cible, progression du plan, volume restant.
  */
-import { Target } from 'lucide-react';
+import { RefreshCw, Target } from 'lucide-react';
 import type { DashboardSummary } from '@/lib/engine';
 import { generatePlan } from '@/app/actions';
 
@@ -103,9 +103,14 @@ export default function ObjectiveCard({
           />
         </div>
         <form action={generatePlan} className="mt-4">
-          <button className="text-[11px] text-ats-gray underline-offset-4 transition-colors hover:text-ats-muted hover:underline">
-            Régénérer le plan depuis aujourd&apos;hui
+          <button className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-ats-green/30 bg-ats-green/10 px-4 py-2.5 text-sm font-semibold text-ats-green transition-colors hover:bg-ats-green/20 active:scale-[0.99]">
+            <RefreshCw className="h-4 w-4" />
+            Régénérer le plan
           </button>
+          <p className="mt-2 text-center text-[11px] text-ats-gray">
+            Recrée les séances depuis ton objectif actif, en respectant ton nombre
+            de séances/semaine (Profil). L&apos;historique réalisé est conservé.
+          </p>
         </form>
       </div>
     </div>

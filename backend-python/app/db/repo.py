@@ -66,17 +66,39 @@ class SupabaseRepo:
 
     # ------------------------------------------------------------- objectives
     def get_active_objective(self, user_id: str) -> dict | None:
+        """Prochaine course à venir (objectif actif le plus proche dans le futur).
+
+        Bascule automatiquement sur la course suivante quand la précédente
+        est passée : plus besoin de désactiver manuellement l'objectif.
+        """
         rows = self._get(
             "/objectives",
             {
                 "user_id": f"eq.{user_id}",
                 "is_active": "eq.true",
+                "target_date": f"gte.{date.today().isoformat()}",
                 "select": "*",
                 "order": "target_date.asc",
                 "limit": "1",
             },
         )
         return rows[0] if rows else None
+
+    def get_active_objectives(self, user_id: str) -> list[dict]:
+        """Toutes les courses à venir (objectifs actifs), triées par date.
+
+        Base du plan de saison enchaîné : un bloc périodisé par course.
+        """
+        return self._get(
+            "/objectives",
+            {
+                "user_id": f"eq.{user_id}",
+                "is_active": "eq.true",
+                "target_date": f"gte.{date.today().isoformat()}",
+                "select": "*",
+                "order": "target_date.asc",
+            },
+        )
 
     # ----------------------------------------------------------- daily_metrics
     def upsert_daily_metrics(self, user_id: str, metrics: list[dict]) -> list[dict]:

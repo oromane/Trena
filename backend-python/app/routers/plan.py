@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from ..db.repo import SupabaseRepo, get_repo
 from ..engine import calibration
-from ..engine.plan_generator import generate_plan
+from ..engine.plan_generator import generate_season_plan
 from ..security import require_internal_key
 
 router = APIRouter(prefix="/plan", tags=["plan"],
@@ -113,19 +113,18 @@ def generate(req: PlanRequest, repo: SupabaseRepo = Depends(get_repo)) -> PlanRe
     profile = repo.get_profile(req.user_id)
     if profile is None:
         raise HTTPException(status_code=404, detail="Profil introuvable")
-    objective = repo.get_active_objective(req.user_id)
-    if objective is None:
-        raise HTTPException(status_code=404, detail="Aucun objectif actif")
+    objectives = repo.get_active_objectives(req.user_id)
+    if not objectives:
+        raise HTTPException(status_code=404, detail="Aucune course à venir")
 
-    target = date.fromisoformat(objective["target_date"])
     start = req.start_date or date.today()
-    if target <= start:
-        raise HTTPException(status_code=422, detail="Objectif déjà passé")
 
     try:
-        plan = generate_plan(
+        # Plan de saison enchaîné : un bloc périodisé par course (affûtage
+        # avant, récupération après), du plus proche au plus lointain.
+        season = generate_season_plan(
             start_date=start,
-            target_date=target,
+            objectives=objectives,
             availability_mask=profile["weekly_availability_mask"],
             weekly_trimp_start=req.weekly_trimp_start,
             ramp_rate=req.ramp_rate,
@@ -134,35 +133,40 @@ def generate(req: PlanRequest, repo: SupabaseRepo = Depends(get_repo)) -> PlanRe
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
-    if req.persist and plan:
+    if not season:
+        raise HTTPException(status_code=422, detail="Aucune course exploitable (dates déjà passées)")
+
+    if req.persist:
         # Remplace les séances planifiées non réalisées à partir de start
         repo.delete_planned_sessions(req.user_id, start)
         repo.insert_sessions([
             {
                 "user_id": req.user_id,
-                "objective_id": objective["id"],
-                "scheduled_date": p.scheduled_date.isoformat(),
-                "session_type": p.session_type,
-                "duration_planned_minutes": p.duration_minutes,
-                "intensity_target_trimp": p.target_trimp,
+                "objective_id": s.objective_id,
+                "scheduled_date": s.scheduled_date.isoformat(),
+                "session_type": s.session_type,
+                "duration_planned_minutes": s.duration_minutes,
+                "intensity_target_trimp": s.target_trimp,
                 "status": "PLANNED",
             }
-            for p in plan
+            for s in season
         ])
 
+    # target_date de la réponse : la course la plus lointaine du plan.
+    last_target = date.fromisoformat(objectives[-1]["target_date"])
     return PlanResponse(
-        objective_id=objective["id"],
-        target_date=target,
-        n_sessions=len(plan),
-        total_trimp=sum(p.target_trimp for p in plan),
-        persisted=req.persist and bool(plan),
+        objective_id=None,  # plan multi-objectifs (saison)
+        target_date=last_target,
+        n_sessions=len(season),
+        total_trimp=sum(s.target_trimp for s in season),
+        persisted=req.persist and bool(season),
         sessions=[
             PlannedSessionOut(
-                scheduled_date=p.scheduled_date,
-                session_type=p.session_type,
-                duration_minutes=p.duration_minutes,
-                target_trimp=p.target_trimp,
+                scheduled_date=s.scheduled_date,
+                session_type=s.session_type,
+                duration_minutes=s.duration_minutes,
+                target_trimp=s.target_trimp,
             )
-            for p in plan
+            for s in season
         ],
     )

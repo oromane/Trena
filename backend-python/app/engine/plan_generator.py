@@ -159,3 +159,78 @@ def generate_plan(
         # Exclure les jours antérieurs à start_date (semaine partielle initiale)
         plan.extend(p for p in week_plan if p.scheduled_date >= start_date)
     return plan
+
+
+@dataclass(frozen=True)
+class SeasonDay:
+    """Séance planifiée rattachée à une course (objectif) de la saison."""
+    scheduled_date: date
+    session_type: str
+    duration_minutes: int
+    target_trimp: int
+    objective_id: str
+
+
+def _to_date(value) -> date:
+    return value if isinstance(value, date) else date.fromisoformat(str(value)[:10])
+
+
+def generate_season_plan(
+    start_date: date,
+    objectives: list[dict],
+    availability_mask: list[int],
+    weekly_trimp_start: float = 300.0,
+    ramp_rate: float = 0.05,
+    sessions_per_week: int | None = None,
+    recovery_days_after_race: int = 4,
+) -> list[SeasonDay]:
+    """Plan de saison enchaîné sur plusieurs courses.
+
+    Pour chaque course à venir (triée par date), génère un bloc périodisé
+    (montée + affûtage sur les 2 dernières semaines) depuis la fin de la
+    récupération de la course précédente. Après chaque course, une coupure
+    de `recovery_days_after_race` jours sans séance modélise le repos, puis
+    le bloc suivant démarre.
+
+    Args:
+        objectives: dicts contenant au moins `id` et `target_date`.
+
+    Returns:
+        Séances de toute la saison, chacune rattachée à sa course (objective_id).
+    """
+    if len(availability_mask) != 7:
+        raise ValueError("availability_mask doit contenir 7 valeurs (lundi→dimanche)")
+
+    races = sorted(
+        ((o, _to_date(o["target_date"])) for o in objectives),
+        key=lambda x: x[1],
+    )
+
+    season: list[SeasonDay] = []
+    seg_start = start_date
+    for obj, race_date in races:
+        # Course déjà passée ou absorbée par le bloc précédent : ignorée.
+        if race_date <= seg_start:
+            continue
+        block = generate_plan(
+            start_date=seg_start,
+            target_date=race_date,
+            availability_mask=availability_mask,
+            weekly_trimp_start=weekly_trimp_start,
+            ramp_rate=ramp_rate,
+            sessions_per_week=sessions_per_week,
+        )
+        season.extend(
+            SeasonDay(
+                scheduled_date=p.scheduled_date,
+                session_type=p.session_type,
+                duration_minutes=p.duration_minutes,
+                target_trimp=p.target_trimp,
+                objective_id=obj["id"],
+            )
+            for p in block
+        )
+        # Repos après la course avant d'enchaîner le bloc suivant.
+        seg_start = race_date + timedelta(days=1 + recovery_days_after_race)
+
+    return season
