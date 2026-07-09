@@ -283,6 +283,45 @@ def create(req: CreateRequest,
             "target_trimp": trimp}
 
 
+class CompleteRequest(BaseModel):
+    user_id: str
+    session_id: str
+    done: bool = True  # True = valider (faite), False = annuler la validation
+
+
+@router.post("/complete")
+def complete(req: CompleteRequest,
+             repo: SupabaseRepo = Depends(get_repo)) -> dict:
+    """Validation manuelle d'une séance : la passe en COMPLETED (→ historique
+    + adhérence), sans supposer qu'elle est faite automatiquement.
+
+    Le réalisé est initialisé au prévu (durée + TRIMP) tant qu'aucune donnée
+    Garmin réelle n'existe. `done=False` annule la validation (retour PLANNED),
+    en préservant un éventuel réalisé importé depuis Garmin.
+    """
+    session = repo.get_session(req.session_id, req.user_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Séance introuvable")
+
+    if req.done:
+        fields: dict = {"status": "COMPLETED"}
+        # Ne pas écraser un réalisé déjà importé (Garmin).
+        if session.get("duration_actual_minutes") is None:
+            fields["duration_actual_minutes"] = session["duration_planned_minutes"]
+        if session.get("trimp_actual") is None:
+            fields["trimp_actual"] = session["intensity_target_trimp"]
+    else:
+        fields = {"status": "PLANNED"}
+        # Efface le réalisé seulement s'il a été saisi manuellement
+        # (pas de séance Garmin rattachée).
+        if not session.get("garmin_activity_id"):
+            fields["duration_actual_minutes"] = None
+            fields["trimp_actual"] = None
+
+    repo.update_session(req.session_id, fields)
+    return {"completed": req.done, "status": fields["status"]}
+
+
 class DeleteRequest(BaseModel):
     user_id: str
     session_id: str

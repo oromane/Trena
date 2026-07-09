@@ -8,6 +8,7 @@
 import {
   CalendarCheck2,
   CalendarPlus,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Plus,
@@ -19,6 +20,7 @@ import { createSupabaseBrowser } from '@/lib/supabase/client';
 import type { WorkoutTemplate } from '@/lib/engine';
 import { fmtDurationShort } from '@/lib/format';
 import {
+  completeSession,
   createSession,
   deleteSession,
   publishPlanToCalendar,
@@ -640,6 +642,24 @@ export default function CalendarView({
               <button type="button" onClick={() => setEditCustom(true)}
                       className="rounded-lg bg-ats-violet/10 px-3 py-2 text-xs font-semibold text-ats-violet hover:bg-ats-violet/20">
                 Personnaliser (constructeur)
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => {
+                  const fd = new FormData();
+                  fd.set('session_id', editing.session.id);
+                  fd.set('done', editing.session.status === 'COMPLETED' ? 'false' : 'true');
+                  submit(completeSession, fd);
+                }}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold disabled:opacity-50 ${
+                  editing.session.status === 'COMPLETED'
+                    ? 'border border-ats-green/40 bg-ats-green/10 text-ats-green hover:bg-ats-green/20'
+                    : 'bg-ats-green px-4 text-ats-bg hover:brightness-110'
+                }`}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                {editing.session.status === 'COMPLETED' ? 'Faite — annuler' : 'Marquer comme faite'}
               </button>
               <button
                 type="button"

@@ -238,6 +238,21 @@ export async function deleteSession(formData: FormData) {
   revalidatePath('/dashboard');
 }
 
+/** Validation manuelle d'une séance : la marque comme faite (→ historique). */
+export async function completeSession(formData: FormData) {
+  const { user } = await requireUser();
+  try {
+    await engineFetch('/sessions/complete', {
+      user_id: user.id,
+      session_id: String(formData.get('session_id')),
+      done: formData.get('done') !== 'false',
+    });
+  } catch (e) {
+    console.error('completeSession:', e);
+  }
+  revalidatePath('/dashboard');
+}
+
 // ------------------------------------------------------------------ Profil
 export async function updateProfile(formData: FormData) {
   const { supabase, user } = await requireUser();

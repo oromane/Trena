@@ -2,10 +2,10 @@
  * Séance recommandée : LA carte de décision.
  * Quoi, comment (blocs d'exécution), pourquoi, quel gain, quel risque si ignorée.
  */
-import { ArrowRight, Flame, ListChecks, Timer } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Flame, ListChecks, Timer } from 'lucide-react';
 import type { DashboardSummary } from '@/lib/engine';
 import { fmtDuration } from '@/lib/format';
-import { runDailyAdjust } from '@/app/actions';
+import { completeSession, runDailyAdjust } from '@/app/actions';
 
 const TYPE_META: Record<string, { label: string; color: string; goal: string }> = {
   INTERVAL: {
@@ -188,7 +188,7 @@ export default function SessionCard({
         </div>
       </dl>
 
-      <div className="mt-auto flex items-center justify-between pt-6">
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-6">
         {gainPct > 0 ? (
           <span className="text-xs text-ats-muted">
             Gain estimé :{' '}
@@ -198,12 +198,30 @@ export default function SessionCard({
         ) : (
           <span />
         )}
-        <form action={runDailyAdjust}>
-          <button className="group inline-flex items-center gap-2 rounded-xl bg-ats-green px-5 py-2.5 text-sm font-semibold text-ats-bg transition-transform hover:scale-[1.02] active:scale-[0.98]">
-            Réévaluer maintenant
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-          </button>
-        </form>
+        <div className="flex items-center gap-2">
+          {session.status === 'COMPLETED' ? (
+            <form action={completeSession}>
+              <input type="hidden" name="session_id" value={session.id} />
+              <input type="hidden" name="done" value="false" />
+              <button className="inline-flex items-center gap-1.5 rounded-xl border border-ats-green/40 bg-ats-green/10 px-4 py-2.5 text-sm font-semibold text-ats-green transition-colors hover:bg-ats-green/20">
+                <CheckCircle2 className="h-4 w-4" /> Faite — annuler
+              </button>
+            </form>
+          ) : (
+            <form action={completeSession}>
+              <input type="hidden" name="session_id" value={session.id} />
+              <button className="inline-flex items-center gap-1.5 rounded-xl bg-ats-green px-4 py-2.5 text-sm font-semibold text-ats-bg transition-transform hover:scale-[1.02] active:scale-[0.98]">
+                <CheckCircle2 className="h-4 w-4" /> Marquer comme faite
+              </button>
+            </form>
+          )}
+          <form action={runDailyAdjust}>
+            <button className="group inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-ats-text/90 transition-colors hover:bg-white/5">
+              Réévaluer
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

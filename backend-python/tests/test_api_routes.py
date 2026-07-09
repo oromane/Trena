@@ -70,10 +70,10 @@ def test_plan_generate_persists(client, repo):
     repo.get_profile.return_value = {
         "id": "u1", "weekly_availability_mask": [60, 60, 60, 60, 60, 120, 90],
     }
-    repo.get_active_objective.return_value = {
+    repo.get_active_objectives.return_value = [{
         "id": "obj1",
         "target_date": (today + timedelta(weeks=10)).isoformat(),
-    }
+    }]
     r = client.post("/plan/generate", headers=HEADERS,
                     json={"user_id": "u1", "persist": True})
     assert r.status_code == 200
@@ -84,9 +84,27 @@ def test_plan_generate_persists(client, repo):
     repo.insert_sessions.assert_called_once()
 
 
+def test_plan_generate_chains_multiple_objectives(client, repo):
+    today = date.today()
+    repo.get_profile.return_value = {
+        "id": "u1", "weekly_availability_mask": [60, 60, 60, 60, 60, 120, 90],
+    }
+    repo.get_active_objectives.return_value = [
+        {"id": "obj1", "target_date": (today + timedelta(weeks=8)).isoformat()},
+        {"id": "obj2", "target_date": (today + timedelta(weeks=20)).isoformat()},
+    ]
+    r = client.post("/plan/generate", headers=HEADERS,
+                    json={"user_id": "u1", "persist": True})
+    assert r.status_code == 200
+    assert r.json()["n_sessions"] > 0
+    # Les séances sont rattachées aux deux courses de la saison.
+    rows = repo.insert_sessions.call_args[0][0]
+    assert {row["objective_id"] for row in rows} == {"obj1", "obj2"}
+
+
 def test_plan_requires_active_objective(client, repo):
     repo.get_profile.return_value = {"id": "u1", "weekly_availability_mask": [60] * 7}
-    repo.get_active_objective.return_value = None
+    repo.get_active_objectives.return_value = []
     r = client.post("/plan/generate", headers=HEADERS, json={"user_id": "u1"})
     assert r.status_code == 404
 
