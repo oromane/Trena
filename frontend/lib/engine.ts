@@ -192,6 +192,30 @@ export async function getWorkoutTemplates(): Promise<WorkoutTemplate[]> {
   }
 }
 
+export interface LibraryItem {
+  id: string;
+  title: string;
+  session_type: string;
+  duration_minutes: number;
+  target_trimp: number;
+  structure: Workout;
+  created_at: string;
+}
+
+/** Bibliothèque de séances de test de l'utilisateur (isolée du moteur). */
+export async function getWorkoutLibrary(userId: string): Promise<LibraryItem[]> {
+  try {
+    const res = await fetch(
+      `${ENGINE_URL}/sessions/library?user_id=${encodeURIComponent(userId)}`,
+      { headers: { 'X-Internal-Key': INTERNAL_KEY }, cache: 'no-store' }
+    );
+    if (!res.ok) return [];
+    return (await res.json()).templates ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export interface CalendarStatus {
   linked: boolean;
   expires_at?: string;

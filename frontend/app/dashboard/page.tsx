@@ -17,6 +17,7 @@ import { ensureProfile } from '@/app/actions';
 import {
   getCalendarStatus,
   getDashboardSummary,
+  getWorkoutLibrary,
   getWorkoutTemplates,
 } from '@/lib/engine';
 
@@ -80,7 +81,10 @@ export default async function DashboardPage({
     getCalendarStatus(user!.id),
     supabase.from('profiles').select('full_name').eq('id', user!.id).maybeSingle(),
   ]);
-  const templates = await getWorkoutTemplates();
+  const [templates, library] = await Promise.all([
+    getWorkoutTemplates(),
+    getWorkoutLibrary(user!.id),
+  ]);
 
   const rawName = user?.email?.split('@')[0] ?? 'athlète';
   const fallback = rawName.charAt(0).toUpperCase() + rawName.slice(1).split('.')[0];
@@ -211,6 +215,7 @@ export default async function DashboardPage({
               <CalendarView
                 calendarLinked={calStatus.linked}
                 templates={templates}
+                library={library}
               />
             </div>
           </section>

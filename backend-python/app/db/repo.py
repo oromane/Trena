@@ -100,6 +100,33 @@ class SupabaseRepo:
             },
         )
 
+    # -------------------------------------------- bibliothèque de séances (test)
+    def save_template(self, user_id: str, row: dict) -> dict | None:
+        rows = self._post("/templates_seances",
+                          [{**row, "user_id": user_id}],
+                          headers={"Prefer": "return=representation"})
+        return rows[0] if rows else None
+
+    def list_library(self, user_id: str) -> list[dict]:
+        return self._get(
+            "/templates_seances",
+            {"user_id": f"eq.{user_id}", "select": "*", "order": "created_at.desc"},
+        )
+
+    def get_template(self, user_id: str, template_id: str) -> dict | None:
+        rows = self._get(
+            "/templates_seances",
+            {"user_id": f"eq.{user_id}", "id": f"eq.{template_id}", "select": "*"},
+        )
+        return rows[0] if rows else None
+
+    def delete_template(self, user_id: str, template_id: str) -> None:
+        r = self._client.delete(
+            "/templates_seances",
+            params={"id": f"eq.{template_id}", "user_id": f"eq.{user_id}"},
+        )
+        r.raise_for_status()
+
     # ----------------------------------------------------------- daily_metrics
     def upsert_daily_metrics(self, user_id: str, metrics: list[dict]) -> list[dict]:
         payload = [{**m, "user_id": user_id} for m in metrics]

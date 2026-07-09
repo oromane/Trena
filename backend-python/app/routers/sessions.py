@@ -97,6 +97,8 @@ class UpdateRequest(BaseModel):
     title: str | None = None
     # Remplacement complet du contenu par le constructeur libre :
     custom: dict | None = None
+    # Ou par le constructeur structuré (types, conditions, cibles) :
+    structured: dict | None = None
 
 
 @router.post("/update")
@@ -113,11 +115,16 @@ def update(req: UpdateRequest,
 
     fields: dict = {}
 
-    if req.custom:
+    if req.structured or req.custom:
         try:
-            built = templates.build_custom_workout(
-                req.custom.get("title", ""), req.custom.get("steps") or []
-            )
+            if req.structured:
+                built = templates.build_structured_workout(
+                    req.structured.get("title", ""), req.structured.get("steps") or []
+                )
+            else:
+                built = templates.build_custom_workout(
+                    req.custom.get("title", ""), req.custom.get("steps") or []
+                )
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
         fields.update({
@@ -201,6 +208,8 @@ class CreateRequest(BaseModel):
     params: dict | None = None
     # Ou constructeur libre (style Garmin) :
     custom: dict | None = None  # {"title": ..., "steps": [...]}
+    # Ou constructeur structuré avancé (types, conditions, cibles) :
+    structured: dict | None = None  # {"title": ..., "steps": [...]}
 
 
 @router.get("/templates")
@@ -214,7 +223,27 @@ def create(req: CreateRequest,
            repo: SupabaseRepo = Depends(get_repo)) -> dict:
     objective = repo.get_active_objective(req.user_id)
 
-    if req.custom:
+    if req.structured:
+        # ------------------------------------- constructeur structuré avancé
+        try:
+            built = templates.build_structured_workout(
+                req.structured.get("title", ""), req.structured.get("steps") or []
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        row = {
+            "user_id": req.user_id,
+            "objective_id": objective["id"] if objective else None,
+            "scheduled_date": req.scheduled_date.isoformat(),
+            "session_type": built["session_type"],
+            "title": built["title"],
+            "structure": built["structure"],
+            "duration_planned_minutes": built["duration_minutes"],
+            "intensity_target_trimp": built["target_trimp"],
+            "status": "PLANNED",
+        }
+        trimp = built["target_trimp"]
+    elif req.custom:
         # ---------------------------------------- constructeur libre
         try:
             built = templates.build_custom_workout(
@@ -281,6 +310,95 @@ def create(req: CreateRequest,
     return {"created": True,
             "session_id": created[0]["id"] if created else None,
             "target_trimp": trimp}
+
+
+# --------------------------------------------- bibliothèque de séances (test)
+def _build_library_payload(custom: dict | None, structured: dict | None) -> dict:
+    if structured:
+        return templates.build_structured_workout(
+            structured.get("title", ""), structured.get("steps") or [])
+    if custom:
+        return templates.build_custom_workout(
+            custom.get("title", ""), custom.get("steps") or [])
+    raise HTTPException(status_code=422, detail="Aucune structure fournie")
+
+
+class LibrarySaveRequest(BaseModel):
+    user_id: str
+    custom: dict | None = None
+    structured: dict | None = None
+
+
+@router.post("/library/save")
+def library_save(req: LibrarySaveRequest,
+                 repo: SupabaseRepo = Depends(get_repo)) -> dict:
+    """Enregistre une séance construite dans la bibliothèque de test (isolée
+    du moteur : n'impacte pas la charge prévisionnelle Banister)."""
+    try:
+        built = _build_library_payload(req.custom, req.structured)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    saved = repo.save_template(req.user_id, {
+        "title": built["title"],
+        "session_type": built["session_type"],
+        "duration_minutes": built["duration_minutes"],
+        "target_trimp": built["target_trimp"],
+        "structure": built["structure"],
+    })
+    return {"saved": True, "template_id": saved["id"] if saved else None}
+
+
+@router.get("/library")
+def library_list(user_id: str,
+                 repo: SupabaseRepo = Depends(get_repo)) -> dict:
+    return {"templates": repo.list_library(user_id)}
+
+
+class LibraryIdRequest(BaseModel):
+    user_id: str
+    template_id: str
+
+
+@router.post("/library/delete")
+def library_delete(req: LibraryIdRequest,
+                   repo: SupabaseRepo = Depends(get_repo)) -> dict:
+    repo.delete_template(req.user_id, req.template_id)
+    return {"deleted": True}
+
+
+class LibraryScheduleRequest(BaseModel):
+    user_id: str
+    template_id: str
+    scheduled_date: date_type
+    scheduled_time: str | None = None
+
+
+@router.post("/library/schedule")
+def library_schedule(req: LibraryScheduleRequest,
+                     repo: SupabaseRepo = Depends(get_repo)) -> dict:
+    """Instancie un modèle de la bibliothèque en séance planifiée (entre alors
+    dans le plan et la charge prévisionnelle)."""
+    tpl = repo.get_template(req.user_id, req.template_id)
+    if tpl is None:
+        raise HTTPException(status_code=404, detail="Modèle introuvable")
+    objective = repo.get_active_objective(req.user_id)
+    row = {
+        "user_id": req.user_id,
+        "objective_id": objective["id"] if objective else None,
+        "scheduled_date": req.scheduled_date.isoformat(),
+        "session_type": tpl["session_type"],
+        "title": tpl["title"],
+        "structure": tpl["structure"],
+        "duration_planned_minutes": tpl["duration_minutes"],
+        "intensity_target_trimp": tpl["target_trimp"],
+        "status": "PLANNED",
+    }
+    t = _parse_time(req.scheduled_time)
+    if t is not None:
+        row["scheduled_time"] = t.isoformat()
+    created = repo.insert_sessions([row])
+    return {"created": True,
+            "session_id": created[0]["id"] if created else None}
 
 
 class CompleteRequest(BaseModel):

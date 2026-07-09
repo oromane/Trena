@@ -357,3 +357,152 @@ def build_custom_workout(title: str, steps: list[dict]) -> dict:
                      "la régularité prime sur l'intensité.",
         },
     }
+
+
+# --------------------------------------- constructeur structuré (avancé)
+# Extension du constructeur libre avec la sémantique demandée :
+#  - type de bloc : warmup / work / recovery / cooldown
+#  - condition de fin : time (minutes) / distance (m) / lap (manuel)
+#  - cible UNIQUE : pace (bornes s/km) / hr (zone) / none (ressenti)
+#  - groupes de répétition (multiplicateur)
+# La zone (1-5) reste l'ancre physiologique (durée estimée + TRIMP), même
+# pour les blocs en distance ou lap.
+
+TYPE_LABEL = {
+    "warmup": "Échauffement",
+    "work": "Travail",
+    "recovery": "Récupération",
+    "cooldown": "Retour au calme",
+}
+
+# Allure nominale par zone (s/km) pour estimer la durée d'un bloc en distance.
+_NOMINAL_PACE = {1: 400, 2: 345, 3: 310, 4: 280, 5: 250}
+# Durée estimée (min) d'un bloc « lap » (fin manuelle) selon son type.
+_LAP_DEFAULT = {"warmup": 12.0, "cooldown": 8.0, "recovery": 2.0, "work": 4.0}
+
+
+def _fmt_pace(s_per_km: float) -> str:
+    m, s = divmod(int(round(s_per_km)), 60)
+    return f"{m}:{s:02d}"
+
+
+def _validate_structured(step: dict) -> tuple[dict, float, int]:
+    """Valide un bloc structuré. Retourne (bloc_affiché, minutes_estimées, zone)."""
+    stype = str(step.get("type", "work"))
+    if stype not in TYPE_LABEL:
+        raise ValueError(f"type de bloc invalide : {stype}")
+    try:
+        zone = int(step.get("zone", 2))
+    except (TypeError, ValueError):
+        raise ValueError("zone numérique requise (1-5)")
+    if zone not in ZONE_TRIMP:
+        raise ValueError("zone doit être comprise entre 1 et 5")
+
+    condition = str(step.get("condition", "time"))
+    if condition == "time":
+        try:
+            minutes = float(step.get("minutes", 0))
+        except (TypeError, ValueError):
+            raise ValueError("minutes numériques requises")
+        if not 0.5 <= minutes <= 180:
+            raise ValueError("durée d'un bloc entre 0,5 et 180 min")
+        cond_txt = _fmt(minutes)
+    elif condition == "distance":
+        try:
+            dist = float(step.get("distance_m", 0))
+        except (TypeError, ValueError):
+            raise ValueError("distance numérique requise")
+        if not 100 <= dist <= 100_000:
+            raise ValueError("distance d'un bloc entre 100 m et 100 km")
+        minutes = (dist / 1000.0) * _NOMINAL_PACE[zone] / 60.0
+        cond_txt = f"{dist / 1000:.1f} km" if dist >= 1000 else f"{int(dist)} m"
+    elif condition == "lap":
+        minutes = _LAP_DEFAULT[stype]
+        cond_txt = "jusqu'au lap (manuel)"
+    else:
+        raise ValueError(f"condition invalide : {condition}")
+
+    # Cible UNIQUE (allure / FC / aucune)
+    target = str(step.get("target", "none"))
+    if target == "pace":
+        try:
+            lo = float(step["pace_low"])
+            hi = float(step["pace_high"])
+        except (KeyError, TypeError, ValueError):
+            raise ValueError("cible allure : pace_low et pace_high (s/km) requis")
+        if not (60 <= lo <= 900 and 60 <= hi <= 900):
+            raise ValueError("allures hors bornes (1:00–15:00 /km)")
+        lo, hi = sorted((lo, hi))
+        target_txt = f"allure {_fmt_pace(lo)}–{_fmt_pace(hi)}/km"
+    elif target == "hr":
+        target_txt = f"FC {ZONE_LABELS[zone]}"
+    elif target == "none":
+        target_txt = "au ressenti"
+    else:
+        raise ValueError(f"cible invalide : {target}")
+
+    return {"label": TYPE_LABEL[stype], "detail": f"{cond_txt} · {target_txt}"}, minutes, zone
+
+
+def build_structured_workout(title: str, steps: list[dict]) -> dict:
+    """Construit une séance structurée (types, conditions, cibles, répétitions).
+
+    Même forme de sortie que build_custom_workout. La durée des blocs en
+    distance/lap est estimée (allure nominale par zone) ; le TRIMP dérive de
+    la zone. Raises ValueError si la structure est invalide.
+    """
+    if not steps:
+        raise ValueError("au moins un bloc est requis")
+    title = (title or "Séance structurée").strip()[:100]
+
+    b = _Builder()
+    zone_minutes: dict[int, float] = {}
+    n_steps = 0
+
+    for item in steps:
+        if item.get("kind") == "repeat":
+            try:
+                times = int(item.get("times", 0))
+            except (TypeError, ValueError):
+                raise ValueError("répétitions invalides")
+            if not 2 <= times <= 30:
+                raise ValueError("un bloc doit être répété entre 2 et 30 fois")
+            inner = item.get("steps") or []
+            if not inner:
+                raise ValueError("un bloc répété doit contenir au moins un bloc")
+            parts = []
+            for s in inner:
+                if s.get("kind") == "repeat":
+                    raise ValueError("blocs répétés imbriqués non autorisés")
+                block, minutes, zone = _validate_structured(s)
+                n_steps += 1
+                parts.append(f"{block['label']} — {block['detail']}")
+                b.minutes += minutes * times
+                b.trimp += minutes * times * ZONE_TRIMP[zone]
+                zone_minutes[zone] = zone_minutes.get(zone, 0) + minutes * times
+            b.blocks.append({"label": f"{times} × bloc", "detail": " + ".join(parts)})
+        else:
+            block, minutes, zone = _validate_structured(item)
+            n_steps += 1
+            b.blocks.append(block)
+            b.minutes += minutes
+            b.trimp += minutes * ZONE_TRIMP[zone]
+            zone_minutes[zone] = zone_minutes.get(zone, 0) + minutes
+
+        if n_steps > MAX_STEPS:
+            raise ValueError(f"maximum {MAX_STEPS} blocs")
+
+    if b.minutes < 10 or b.minutes > 360:
+        raise ValueError("durée totale estimée entre 10 min et 6 h requise")
+
+    return {
+        "title": title,
+        "session_type": _dominant_type(zone_minutes),
+        "duration_minutes": round(b.minutes),
+        "target_trimp": round(b.trimp),
+        "structure": {
+            "blocks": b.blocks,
+            "focus": "Séance structurée : une seule cible par bloc. Sur terrain ou "
+                     "météo variable, privilégie la zone plutôt que l'allure au mètre près.",
+        },
+    }

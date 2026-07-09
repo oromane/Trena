@@ -22,12 +22,16 @@ import { fmtDurationShort } from '@/lib/format';
 import {
   completeSession,
   createSession,
+  deleteFromLibrary,
   deleteSession,
   publishPlanToCalendar,
   purgeCalendar,
+  saveToLibrary,
+  scheduleFromLibrary,
   unlinkGoogleCalendar,
   updateSession,
 } from '@/app/actions';
+import type { LibraryItem } from '@/lib/engine';
 
 const TYPE_COLOR: Record<string, string> = {
   INTERVAL: '#FF4500',
@@ -64,11 +68,20 @@ type Editing =
   | { mode: 'add'; date: string }
   | null;
 
-// ------------------------------------------- constructeur libre (Garmin)
+// ------------------------------- constructeur structuré (style Garmin)
+type BType = 'warmup' | 'work' | 'recovery' | 'cooldown';
+type BCond = 'time' | 'distance' | 'lap';
+type BTarget = 'pace' | 'hr' | 'none';
+
 interface BStep {
-  label: string;
+  type: BType;
+  condition: BCond;
   minutes: number;
+  distance_m: number;
   zone: number;
+  target: BTarget;
+  pace_low: number;   // s/km
+  pace_high: number;  // s/km
 }
 interface BItem {
   kind: 'step' | 'repeat';
@@ -79,22 +92,50 @@ interface BItem {
 
 const ZONE_TRIMP: Record<number, number> = { 1: 0.8, 2: 1.2, 3: 2.0, 4: 2.5, 5: 3.0 };
 const ZONES = [1, 2, 3, 4, 5];
+const NOMINAL_PACE: Record<number, number> = { 1: 400, 2: 345, 3: 310, 4: 280, 5: 250 };
+const LAP_DEFAULT: Record<BType, number> = { warmup: 12, cooldown: 8, recovery: 2, work: 4 };
+
+const TYPE_OPTS: [BType, string][] = [
+  ['warmup', 'Échauffement'], ['work', 'Travail'],
+  ['recovery', 'Récupération'], ['cooldown', 'Retour au calme'],
+];
+const COND_OPTS: [BCond, string][] = [['time', 'Temps'], ['distance', 'Distance'], ['lap', 'Lap']];
+const TARGET_OPTS: [BTarget, string][] = [['none', 'Ressenti'], ['pace', 'Allure'], ['hr', 'FC']];
+
+function newStep(over?: Partial<BStep>): BStep {
+  return {
+    type: 'work', condition: 'time', minutes: 10, distance_m: 1000,
+    zone: 2, target: 'none', pace_low: 300, pace_high: 320, ...over,
+  };
+}
+
+function stepMinutes(s: BStep): number {
+  if (s.condition === 'distance') return (s.distance_m / 1000) * NOMINAL_PACE[s.zone] / 60;
+  if (s.condition === 'lap') return LAP_DEFAULT[s.type];
+  return s.minutes;
+}
 
 function estimateBuilder(items: BItem[]): { minutes: number; trimp: number } {
   let minutes = 0;
   let trimp = 0;
+  const acc = (s: BStep, mult: number) => {
+    const m = stepMinutes(s) * mult;
+    minutes += m;
+    trimp += m * (ZONE_TRIMP[s.zone] ?? 1.2);
+  };
   for (const it of items) {
-    if (it.kind === 'repeat') {
-      for (const s of it.steps ?? []) {
-        minutes += s.minutes * (it.times ?? 1);
-        trimp += s.minutes * (it.times ?? 1) * (ZONE_TRIMP[s.zone] ?? 1.2);
-      }
-    } else if (it.step) {
-      minutes += it.step.minutes;
-      trimp += it.step.minutes * (ZONE_TRIMP[it.step.zone] ?? 1.2);
-    }
+    if (it.kind === 'repeat') (it.steps ?? []).forEach((s) => acc(s, it.times ?? 1));
+    else if (it.step) acc(it.step, 1);
   }
   return { minutes: Math.round(minutes), trimp: Math.round(trimp) };
+}
+
+function stepToPayload(s: BStep) {
+  return {
+    kind: 'step', type: s.type, condition: s.condition,
+    minutes: s.minutes, distance_m: s.distance_m, zone: s.zone,
+    target: s.target, pace_low: s.pace_low, pace_high: s.pace_high,
+  };
 }
 
 function builderToPayload(title: string, items: BItem[]) {
@@ -102,10 +143,59 @@ function builderToPayload(title: string, items: BItem[]) {
     title,
     steps: items.map((it) =>
       it.kind === 'repeat'
-        ? { kind: 'repeat', times: it.times, steps: (it.steps ?? []).map((s) => ({ kind: 'step', ...s })) }
-        : { kind: 'step', ...(it.step as BStep) }
+        ? { kind: 'repeat', times: it.times, steps: (it.steps ?? []).map(stepToPayload) }
+        : stepToPayload(it.step as BStep)
     ),
   };
+}
+
+/** Éditeur d'un bloc : type, condition (temps/distance/lap), zone, cible unique. */
+function StepEditor({
+  s, onChange, onRemove,
+}: {
+  s: BStep;
+  onChange: (n: BStep) => void;
+  onRemove?: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <select value={s.type} onChange={(e) => onChange({ ...s, type: e.target.value as BType })} className={INPUT_CLS}>
+        {TYPE_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+      </select>
+      <select value={s.condition} onChange={(e) => onChange({ ...s, condition: e.target.value as BCond })} className={INPUT_CLS}>
+        {COND_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+      </select>
+      {s.condition === 'time' && (
+        <><input type="number" min={1} max={180} value={s.minutes}
+                 onChange={(e) => onChange({ ...s, minutes: Number(e.target.value) })}
+                 className={`${INPUT_CLS} w-16`} /><span className="text-[10px] text-ats-gray">min</span></>
+      )}
+      {s.condition === 'distance' && (
+        <><input type="number" min={100} max={100000} step={100} value={s.distance_m}
+                 onChange={(e) => onChange({ ...s, distance_m: Number(e.target.value) })}
+                 className={`${INPUT_CLS} w-20`} /><span className="text-[10px] text-ats-gray">m</span></>
+      )}
+      {s.condition === 'lap' && <span className="text-[10px] text-ats-gray">fin manuelle</span>}
+      <select value={s.zone} onChange={(e) => onChange({ ...s, zone: Number(e.target.value) })} className={INPUT_CLS}>
+        {ZONES.map((z) => <option key={z} value={z}>Z{z}</option>)}
+      </select>
+      <select value={s.target} onChange={(e) => onChange({ ...s, target: e.target.value as BTarget })} className={INPUT_CLS}>
+        {TARGET_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+      </select>
+      {s.target === 'pace' && (
+        <><input type="number" min={120} max={600} value={s.pace_low} title="allure basse (s/km)"
+                 onChange={(e) => onChange({ ...s, pace_low: Number(e.target.value) })}
+                 className={`${INPUT_CLS} w-16`} /><span className="text-[10px] text-ats-gray">–</span>
+          <input type="number" min={120} max={600} value={s.pace_high} title="allure haute (s/km)"
+                 onChange={(e) => onChange({ ...s, pace_high: Number(e.target.value) })}
+                 className={`${INPUT_CLS} w-16`} /><span className="text-[10px] text-ats-gray">s/km</span></>
+      )}
+      {onRemove && (
+        <button type="button" aria-label="Supprimer le bloc" onClick={onRemove}
+                className="ml-auto text-ats-gray hover:text-ats-red"><X className="h-3.5 w-3.5" /></button>
+      )}
+    </div>
+  );
 }
 
 /** Éditeur d'étapes du constructeur (partagé entre création et personnalisation). */
@@ -121,6 +211,19 @@ function BuilderFields({
   setBItems: (v: BItem[]) => void;
 }) {
   const est = estimateBuilder(bItems);
+  const removeItem = (i: number) => setBItems(bItems.filter((_, j) => j !== i));
+  const setStep = (i: number, s: BStep) => {
+    const next = [...bItems];
+    next[i] = { ...next[i], step: s };
+    setBItems(next);
+  };
+  const setInner = (i: number, k: number, s: BStep) => {
+    const next = [...bItems];
+    const inner = [...(next[i].steps ?? [])];
+    inner[k] = s;
+    next[i] = { ...next[i], steps: inner };
+    setBItems(next);
+  };
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-end gap-3">
@@ -138,44 +241,7 @@ function BuilderFields({
         {bItems.map((it, i) => (
           <div key={i} className="rounded-lg border border-white/10 p-2.5">
             {it.kind === 'step' && it.step ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <input
-                  value={it.step.label}
-                  onChange={(e) => {
-                    const next = [...bItems];
-                    next[i] = { ...it, step: { ...it.step!, label: e.target.value } };
-                    setBItems(next);
-                  }}
-                  className={`${INPUT_CLS} w-36`}
-                  placeholder="Libellé"
-                />
-                <input
-                  type="number" min={1} max={180} value={it.step.minutes}
-                  onChange={(e) => {
-                    const next = [...bItems];
-                    next[i] = { ...it, step: { ...it.step!, minutes: Number(e.target.value) } };
-                    setBItems(next);
-                  }}
-                  className={`${INPUT_CLS} w-16`}
-                />
-                <span className="text-[10px] text-ats-gray">min</span>
-                <select
-                  value={it.step.zone}
-                  onChange={(e) => {
-                    const next = [...bItems];
-                    next[i] = { ...it, step: { ...it.step!, zone: Number(e.target.value) } };
-                    setBItems(next);
-                  }}
-                  className={INPUT_CLS}
-                >
-                  {ZONES.map((z) => <option key={z} value={z}>Z{z}</option>)}
-                </select>
-                <button type="button" aria-label="Supprimer l'étape"
-                        onClick={() => setBItems(bItems.filter((_, j) => j !== i))}
-                        className="ml-auto text-ats-gray hover:text-ats-red">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
+              <StepEditor s={it.step} onChange={(s) => setStep(i, s)} onRemove={() => removeItem(i)} />
             ) : (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
@@ -193,73 +259,34 @@ function BuilderFields({
                   />
                   <span className="text-[10px] text-ats-gray">fois</span>
                   <button type="button" aria-label="Supprimer le bloc"
-                          onClick={() => setBItems(bItems.filter((_, j) => j !== i))}
+                          onClick={() => removeItem(i)}
                           className="ml-auto text-ats-gray hover:text-ats-red">
                     <X className="h-3.5 w-3.5" />
                   </button>
                 </div>
                 {(it.steps ?? []).map((s, k) => (
-                  <div key={k} className="ml-4 flex flex-wrap items-center gap-2">
-                    <input
-                      value={s.label}
-                      onChange={(e) => {
-                        const next = [...bItems];
-                        const inner = [...(it.steps ?? [])];
-                        inner[k] = { ...s, label: e.target.value };
-                        next[i] = { ...it, steps: inner };
-                        setBItems(next);
-                      }}
-                      className={`${INPUT_CLS} w-32`}
+                  <div key={k} className="ml-4">
+                    <StepEditor
+                      s={s}
+                      onChange={(ns) => setInner(i, k, ns)}
+                      onRemove={(it.steps?.length ?? 0) > 1
+                        ? () => {
+                            const next = [...bItems];
+                            next[i] = { ...it, steps: (it.steps ?? []).filter((_, j) => j !== k) };
+                            setBItems(next);
+                          }
+                        : undefined}
                     />
-                    <input
-                      type="number" min={1} max={60} value={s.minutes}
-                      onChange={(e) => {
-                        const next = [...bItems];
-                        const inner = [...(it.steps ?? [])];
-                        inner[k] = { ...s, minutes: Number(e.target.value) };
-                        next[i] = { ...it, steps: inner };
-                        setBItems(next);
-                      }}
-                      className={`${INPUT_CLS} w-14`}
-                    />
-                    <span className="text-[10px] text-ats-gray">min</span>
-                    <select
-                      value={s.zone}
-                      onChange={(e) => {
-                        const next = [...bItems];
-                        const inner = [...(it.steps ?? [])];
-                        inner[k] = { ...s, zone: Number(e.target.value) };
-                        next[i] = { ...it, steps: inner };
-                        setBItems(next);
-                      }}
-                      className={INPUT_CLS}
-                    >
-                      {ZONES.map((z) => <option key={z} value={z}>Z{z}</option>)}
-                    </select>
-                    {(it.steps?.length ?? 0) > 1 && (
-                      <button type="button" aria-label="Retirer"
-                              onClick={() => {
-                                const next = [...bItems];
-                                next[i] = { ...it, steps: (it.steps ?? []).filter((_, j) => j !== k) };
-                                setBItems(next);
-                              }}
-                              className="text-ats-gray hover:text-ats-red">
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
                   </div>
                 ))}
                 <button type="button"
                         onClick={() => {
                           const next = [...bItems];
-                          next[i] = {
-                            ...it,
-                            steps: [...(it.steps ?? []), { label: 'Étape', minutes: 2, zone: 3 }],
-                          };
+                          next[i] = { ...it, steps: [...(it.steps ?? []), newStep({ type: 'work', minutes: 2, zone: 4 })] };
                           setBItems(next);
                         }}
                         className="ml-4 text-[10px] text-ats-muted hover:text-ats-text">
-                  + étape dans le bloc
+                  + bloc dans la répétition
                 </button>
               </div>
             )}
@@ -269,12 +296,12 @@ function BuilderFields({
 
       <div className="flex flex-wrap items-center gap-3">
         <button type="button"
-                onClick={() => setBItems([...bItems, { kind: 'step', step: { label: 'Étape', minutes: 10, zone: 2 } }])}
+                onClick={() => setBItems([...bItems, { kind: 'step', step: newStep() }])}
                 className="rounded-lg bg-ats-bg2 px-3 py-1.5 text-[11px] text-ats-muted hover:text-ats-text">
-          + Étape
+          + Bloc
         </button>
         <button type="button"
-                onClick={() => setBItems([...bItems, { kind: 'repeat', times: 4, steps: [{ label: 'Effort', minutes: 2, zone: 4 }, { label: 'Récup', minutes: 1, zone: 1 }] }])}
+                onClick={() => setBItems([...bItems, { kind: 'repeat', times: 4, steps: [newStep({ type: 'work', minutes: 2, zone: 4 }), newStep({ type: 'recovery', minutes: 1, zone: 1 })] }])}
                 className="rounded-lg bg-ats-bg2 px-3 py-1.5 text-[11px] text-ats-violet hover:text-ats-text">
           + Bloc répété
         </button>
@@ -316,9 +343,11 @@ function rangeLabel(view: View, anchor: Date): string {
 export default function CalendarView({
   calendarLinked,
   templates,
+  library = [],
 }: {
   calendarLinked: boolean;
   templates: WorkoutTemplate[];
+  library?: LibraryItem[];
 }) {
   const [view, setView] = useState<View>('1s');
   const [anchor, setAnchor] = useState(() => new Date());
@@ -329,16 +358,16 @@ export default function CalendarView({
   const [templateId, setTemplateId] = useState(templates[0]?.id ?? '');
   const [bTitle, setBTitle] = useState('Ma séance');
   const [bItems, setBItems] = useState<BItem[]>([
-    { kind: 'step', step: { label: 'Échauffement', minutes: 15, zone: 2 } },
+    { kind: 'step', step: newStep({ type: 'warmup', minutes: 15, zone: 2 }) },
     {
       kind: 'repeat',
       times: 6,
       steps: [
-        { label: 'Effort', minutes: 3, zone: 5 },
-        { label: 'Récup', minutes: 2, zone: 1 },
+        newStep({ type: 'work', condition: 'distance', distance_m: 1000, zone: 5, target: 'pace', pace_low: 240, pace_high: 250 }),
+        newStep({ type: 'recovery', condition: 'lap', zone: 1 }),
       ],
     },
-    { kind: 'step', step: { label: 'Retour au calme', minutes: 10, zone: 1 } },
+    { kind: 'step', step: newStep({ type: 'cooldown', minutes: 10, zone: 1 }) },
   ]);
   const [pending, startTransition] = useTransition();
   const [refresh, setRefresh] = useState(0);
@@ -580,7 +609,7 @@ export default function CalendarView({
                 className="mt-3 space-y-3"
               >
                 <input type="hidden" name="session_id" value={editing.session.id} />
-                <input type="hidden" name="custom_workout"
+                <input type="hidden" name="structured_workout"
                        value={JSON.stringify(builderToPayload(bTitle, bItems))} />
                 <BuilderFields bTitle={bTitle} setBTitle={setBTitle}
                                bItems={bItems} setBItems={setBItems} />
@@ -700,9 +729,51 @@ export default function CalendarView({
                 ))}
               </div>
 
+              {library.length > 0 && (
+                <div className="mb-3 rounded-lg border border-white/10 p-2.5">
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-ats-muted">
+                    Bibliothèque de test
+                  </p>
+                  <ul className="space-y-1.5">
+                    {library.map((t) => (
+                      <li key={t.id} className="flex items-center justify-between gap-2 text-[12px]">
+                        <span className="min-w-0 truncate">
+                          <span className="text-ats-text/90">{t.title}</span>
+                          <span className="metric ml-2 text-[11px] text-ats-gray">
+                            {t.duration_minutes}′ · {t.target_trimp} TRIMP
+                          </span>
+                        </span>
+                        <span className="flex shrink-0 items-center gap-2">
+                          <button type="button" disabled={pending}
+                                  onClick={() => {
+                                    const fd = new FormData();
+                                    fd.set('template_id', t.id);
+                                    fd.set('scheduled_date', editing.date);
+                                    fd.set('scheduled_time', '18:00');
+                                    submit(scheduleFromLibrary, fd);
+                                  }}
+                                  className="rounded-md bg-ats-green/15 px-2.5 py-1 text-[11px] font-semibold text-ats-green hover:bg-ats-green/25 disabled:opacity-50">
+                            Planifier ici
+                          </button>
+                          <button type="button" aria-label="Supprimer de la bibliothèque" disabled={pending}
+                                  onClick={() => {
+                                    const fd = new FormData();
+                                    fd.set('template_id', t.id);
+                                    submit(deleteFromLibrary, fd);
+                                  }}
+                                  className="text-ats-gray hover:text-ats-red disabled:opacity-50">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {addMode === 'builder' ? (
                 <div className="space-y-3">
-                  <input type="hidden" name="custom_workout"
+                  <input type="hidden" name="structured_workout"
                          value={JSON.stringify(builderToPayload(bTitle, bItems))} />
                   <BuilderFields bTitle={bTitle} setBTitle={setBTitle}
                                  bItems={bItems} setBItems={setBItems} />
@@ -712,9 +783,21 @@ export default function CalendarView({
                       <input name="scheduled_time" type="time" defaultValue="18:00"
                              className={`${INPUT_CLS} mt-1 block`} />
                     </label>
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() => {
+                        const fd = new FormData();
+                        fd.set('structured_workout', JSON.stringify(builderToPayload(bTitle, bItems)));
+                        submit(saveToLibrary, fd);
+                      }}
+                      className="ml-auto rounded-lg border border-white/15 px-4 py-2 text-xs font-semibold text-ats-text/90 hover:bg-white/5 disabled:opacity-50"
+                    >
+                      Enregistrer en bibliothèque
+                    </button>
                     <button disabled={pending}
-                            className="ml-auto rounded-lg bg-ats-green px-4 py-2 text-xs font-semibold text-ats-bg disabled:opacity-50">
-                      {pending ? '…' : 'Ajouter la séance'}
+                            className="rounded-lg bg-ats-green px-4 py-2 text-xs font-semibold text-ats-bg disabled:opacity-50">
+                      {pending ? '…' : 'Ajouter au plan'}
                     </button>
                   </div>
                 </div>

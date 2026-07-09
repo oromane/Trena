@@ -163,6 +163,7 @@ export async function createSession(formData: FormData) {
   const { user } = await requireUser();
   const templateId = formData.get('template_id');
   const customJson = formData.get('custom_workout');
+  const structuredJson = formData.get('structured_workout');
   const base = {
     user_id: user.id,
     scheduled_date: String(formData.get('scheduled_date')),
@@ -170,7 +171,13 @@ export async function createSession(formData: FormData) {
       ? String(formData.get('scheduled_time'))
       : null,
   };
-  if (customJson) {
+  if (structuredJson) {
+    // Constructeur structuré : types de blocs, conditions, cibles
+    await engineFetch('/sessions/create', {
+      ...base,
+      structured: JSON.parse(String(structuredJson)),
+    });
+  } else if (customJson) {
     // Constructeur libre : titre + étapes sérialisés par le client
     await engineFetch('/sessions/create', {
       ...base,
@@ -201,13 +208,16 @@ export async function createSession(formData: FormData) {
 export async function updateSession(formData: FormData) {
   const { user } = await requireUser();
   const customJson = formData.get('custom_workout');
+  const structuredJson = formData.get('structured_workout');
   const body: Record<string, unknown> = {
     user_id: user.id,
     session_id: String(formData.get('session_id')),
   };
   if (formData.get('new_date')) body.scheduled_date = String(formData.get('new_date'));
   if (formData.get('new_time')) body.scheduled_time = String(formData.get('new_time'));
-  if (customJson) {
+  if (structuredJson) {
+    body.structured = JSON.parse(String(structuredJson));
+  } else if (customJson) {
     body.custom = JSON.parse(String(customJson));
   } else {
     if (formData.get('session_type')) body.session_type = String(formData.get('session_type'));
@@ -234,6 +244,52 @@ export async function deleteSession(formData: FormData) {
     // Séance déjà supprimée / introuvable : suppression idempotente,
     // on ne fait pas planter la page pour autant.
     console.error('deleteSession:', e);
+  }
+  revalidatePath('/dashboard');
+}
+
+// ---------------------------------------- bibliothèque de séances (test)
+/** Enregistre la séance construite dans la bibliothèque (isolée du moteur). */
+export async function saveToLibrary(formData: FormData) {
+  const { user } = await requireUser();
+  const custom = formData.get('custom_workout');
+  const structured = formData.get('structured_workout');
+  await engineFetch('/sessions/library/save', {
+    user_id: user.id,
+    custom: custom ? JSON.parse(String(custom)) : null,
+    structured: structured ? JSON.parse(String(structured)) : null,
+  });
+  revalidatePath('/dashboard');
+}
+
+/** Instancie un modèle de la bibliothèque en séance planifiée. */
+export async function scheduleFromLibrary(formData: FormData) {
+  const { user } = await requireUser();
+  try {
+    await engineFetch('/sessions/library/schedule', {
+      user_id: user.id,
+      template_id: String(formData.get('template_id')),
+      scheduled_date: String(formData.get('scheduled_date')),
+      scheduled_time: formData.get('scheduled_time')
+        ? String(formData.get('scheduled_time'))
+        : null,
+    });
+  } catch (e) {
+    console.error('scheduleFromLibrary:', e);
+  }
+  revalidatePath('/dashboard');
+}
+
+/** Supprime un modèle de la bibliothèque. */
+export async function deleteFromLibrary(formData: FormData) {
+  const { user } = await requireUser();
+  try {
+    await engineFetch('/sessions/library/delete', {
+      user_id: user.id,
+      template_id: String(formData.get('template_id')),
+    });
+  } catch (e) {
+    console.error('deleteFromLibrary:', e);
   }
   revalidatePath('/dashboard');
 }
