@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { IBM_Plex_Mono, Inter } from 'next/font/google';
+import { JetBrains_Mono, Inter } from 'next/font/google';
 import BottomNav from '@/components/BottomNav';
 import './globals.css';
 
@@ -9,9 +9,11 @@ const inter = Inter({
   display: 'swap',
 });
 
-const plexMono = IBM_Plex_Mono({
+// Monospace pour toutes les métriques (chronos, Z-scores, allures) : les
+// chiffres restent alignés lors des mises à jour dynamiques.
+const plexMono = JetBrains_Mono({
   subsets: ['latin'],
-  weight: ['400', '500', '600'],
+  weight: ['400', '500', '700'],
   variable: '--font-plex-mono',
   display: 'swap',
 });
@@ -35,7 +37,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  themeColor: '#050816',
+  themeColor: '#0F172A',
 };
 
 // Thème avant hydratation (anti-flash) + enregistrement du service worker (PWA)

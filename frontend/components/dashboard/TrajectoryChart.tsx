@@ -52,20 +52,20 @@ export default function TrajectoryChart({
         <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
           <defs>
             <linearGradient id="gFit" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.25} />
-              <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
+              <stop offset="0%" stopColor="#2E8B57" stopOpacity={0.25} />
+              <stop offset="100%" stopColor="#2E8B57" stopOpacity={0} />
             </linearGradient>
             <linearGradient id="gForm" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#00E676" stopOpacity={0.3} />
-              <stop offset="100%" stopColor="#00E676" stopOpacity={0} />
+              <stop offset="0%" stopColor="#CBD5E1" stopOpacity={0.3} />
+              <stop offset="100%" stopColor="#CBD5E1" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid stroke="#1A2238" strokeDasharray="3 3" vertical={false} />
+          <CartesianGrid stroke="#334155" strokeDasharray="3 3" vertical={false} />
           <XAxis
             dataKey="label"
             tick={{ fill: '#94A3B8', fontSize: 10 }}
             tickLine={false}
-            axisLine={{ stroke: '#1A2238' }}
+            axisLine={{ stroke: '#334155' }}
             minTickGap={40}
           />
           <YAxis
@@ -75,7 +75,7 @@ export default function TrajectoryChart({
           />
           <Tooltip
             contentStyle={{
-              background: '#12192C',
+              background: '#1E293B',
               border: '1px solid rgba(255,255,255,0.08)',
               borderRadius: 12,
               fontSize: 12,
@@ -87,7 +87,7 @@ export default function TrajectoryChart({
             type="monotone"
             dataKey="fitness"
             name="Fitness"
-            stroke="#3B82F6"
+            stroke="#2E8B57"
             strokeWidth={1.8}
             fill="url(#gFit)"
             dot={false}
@@ -96,7 +96,7 @@ export default function TrajectoryChart({
             type="monotone"
             dataKey="fatigue"
             name="Fatigue"
-            stroke="#EF4444"
+            stroke="#FF4500"
             strokeWidth={1.4}
             fill="transparent"
             strokeDasharray="4 3"
@@ -106,7 +106,7 @@ export default function TrajectoryChart({
             type="monotone"
             dataKey="form"
             name="Forme"
-            stroke="#00E676"
+            stroke="#CBD5E1"
             strokeWidth={2.2}
             fill="url(#gForm)"
             dot={false}

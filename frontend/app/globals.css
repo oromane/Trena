@@ -4,36 +4,41 @@
 
 /* ============================ Thèmes Trena ============================ */
 :root {
-  /* Sombre (défaut) — valeurs RGB pour les modificateurs d'opacité */
-  --ats-bg: 5 8 22;          /* #050816 */
-  --ats-bg2: 11 16 35;       /* #0B1023 */
-  --ats-card: 18 25 44;      /* #12192C */
-  --ats-card2: 26 34 56;     /* #1A2238 */
-  --ats-text: 248 250 252;   /* #F8FAFC */
-  --ats-muted: 148 163 184;  /* #94A3B8 */
-  --ats-green: 0 230 118;    /* #00E676 */
-  --ats-greendark: 0 200 83; /* #00C853 */
-  --ats-blue: 59 130 246;    /* #3B82F6 */
-  --ats-orange: 245 158 11;  /* #F59E0B */
-  --ats-red: 239 68 68;      /* #EF4444 */
-  --ats-violet: 139 92 246;  /* #8B5CF6 */
-  --ats-gray: 51 65 85;      /* #334155 */
-  --ats-border: rgba(255, 255, 255, 0.06);
-  --ats-chart-grid: #1a2238;
+  /* ---- Sombre (défaut) — Palette « Cartographie / Outdoor » ----
+     Fond ardoise (slate) pour un cockpit de données sobre, accents
+     vert forêt (aptitude/assimilation) et orange électrique (fatigue/alerte).
+     Valeurs RGB pour les modificateurs d'opacité Tailwind. */
+  --ats-bg: 15 23 42;        /* #0F172A slate-900 */
+  --ats-bg2: 30 41 59;       /* #1E293B slate-800 */
+  --ats-card: 30 41 59;      /* #1E293B slate-800 */
+  --ats-card2: 51 65 85;     /* #334155 slate-700 */
+  --ats-text: 241 245 249;   /* #F1F5F9 slate-100 */
+  --ats-muted: 148 163 184;  /* #94A3B8 slate-400 */
+  --ats-green: 46 139 87;    /* #2E8B57 vert forêt — fitness / NORMAL / Z1-Z2 */
+  --ats-greendark: 33 110 68;/* #216E44 */
+  --ats-blue: 79 134 168;    /* #4F86A8 bleu acier — endurance aérobie */
+  --ats-orange: 255 69 0;    /* #FF4500 orange électrique — fatigue / CAUTION / Z4-Z5 */
+  --ats-red: 220 68 55;      /* #DC4437 rouge brique — MISSED / suppression */
+  --ats-violet: 124 111 168; /* #7C6FA8 violet montagne — tempo / seuil */
+  --ats-gray: 100 116 139;   /* #64748B slate-500 */
+  --ats-border: rgba(148, 163, 184, 0.14);
+  --ats-chart-grid: #334155;
 }
 
 [data-theme='light'] {
-  --ats-bg: 244 246 251;     /* #F4F6FB */
-  --ats-bg2: 233 237 245;    /* #E9EDF5 */
-  --ats-card: 255 255 255;   /* #FFFFFF */
-  --ats-card2: 238 241 248;  /* #EEF1F8 */
-  --ats-text: 11 16 35;      /* #0B1023 */
+  /* ---- Clair — « Carte topographique » : papier chaud + ardoise ---- */
+  --ats-bg: 243 241 234;     /* #F3F1EA papier */
+  --ats-bg2: 233 230 219;    /* #E9E6DB */
+  --ats-card: 252 251 247;   /* #FCFBF7 */
+  --ats-card2: 236 233 223;  /* #ECE9DF */
+  --ats-text: 30 41 59;      /* #1E293B slate-800 */
   --ats-muted: 91 107 132;   /* #5B6B84 */
-  --ats-greendark: 0 160 67;
-  --ats-green: 0 176 91;     /* vert lisible sur fond clair */
+  --ats-green: 34 119 73;    /* #227749 forêt lisible sur clair */
+  --ats-greendark: 27 94 58; /* #1B5E3A */
+  --ats-orange: 214 58 0;    /* #D63A00 orange contrasté sur clair */
   --ats-gray: 148 163 184;   /* #94A3B8 */
-  --ats-border: rgba(11, 16, 35, 0.1);
-  --ats-chart-grid: #d8dee9;
+  --ats-border: rgba(30, 41, 59, 0.12);
+  --ats-chart-grid: #dad5c7;
 }
 
 /* Compat thème clair pour les bordures « blanches » du design sombre */

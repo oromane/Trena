@@ -10,22 +10,22 @@ import { completeSession, runDailyAdjust } from '@/app/actions';
 const TYPE_META: Record<string, { label: string; color: string; goal: string }> = {
   INTERVAL: {
     label: 'Fractionné',
-    color: '#F59E0B',
+    color: '#FF4500',
     goal: 'Développer la VMA et la capacité anaérobie.',
   },
   TEMPO: {
     label: 'Tempo / Seuil',
-    color: '#8B5CF6',
+    color: '#7C6FA8',
     goal: 'Repousser le seuil lactique pour tenir une allure élevée plus longtemps.',
   },
   ENDURANCE: {
     label: 'Endurance fondamentale',
-    color: '#3B82F6',
+    color: '#4F86A8',
     goal: 'Construire la base aérobie et la densité mitochondriale.',
   },
   RECOVERY: {
     label: 'Récupération active',
-    color: '#00E676',
+    color: '#2E8B57',
     goal: 'Accélérer la récupération en stimulant la circulation sans charge.',
   },
 };

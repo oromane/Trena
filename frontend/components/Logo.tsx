@@ -2,7 +2,7 @@
  * Logo ATS — A: montagne, T: route (ligne verticale), S: trajectoire.
  * Monochrome via currentColor ; l'accent (trajectoire) hérite ou se force.
  */
-export function LogoMark({ size = 28, accent = '#00E676' }: { size?: number; accent?: string }) {
+export function LogoMark({ size = 28, accent = '#2E8B57' }: { size?: number; accent?: string }) {
   return (
     <svg
       width={size}

@@ -30,10 +30,10 @@ import {
 } from '@/app/actions';
 
 const TYPE_COLOR: Record<string, string> = {
-  INTERVAL: '#F59E0B',
-  TEMPO: '#8B5CF6',
-  ENDURANCE: '#3B82F6',
-  RECOVERY: '#00E676',
+  INTERVAL: '#FF4500',
+  TEMPO: '#7C6FA8',
+  ENDURANCE: '#4F86A8',
+  RECOVERY: '#2E8B57',
 };
 
 const TYPE_SHORT: Record<string, string> = {

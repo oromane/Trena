@@ -26,14 +26,14 @@ const METRICS: {
   color: string;
   transform?: (v: number) => number;
 }[] = [
-  { key: 'hrv_ms', label: 'HRV', unit: 'ms', source: 'metrics', color: '#00E676' },
-  { key: 'resting_heart_rate', label: 'FC repos', unit: 'bpm', source: 'metrics', color: '#EF4444' },
-  { key: 'sleep_minutes', label: 'Sommeil', unit: 'h', source: 'metrics', color: '#3B82F6', transform: (v) => Math.round((v / 60) * 10) / 10 },
-  { key: 'weight_kg', label: 'Poids', unit: 'kg', source: 'wellness', color: '#8B5CF6' },
-  { key: 'vo2max', label: 'VO2max', unit: '', source: 'wellness', color: '#F59E0B' },
-  { key: 'steps', label: 'Pas', unit: '', source: 'wellness', color: '#00C853' },
-  { key: 'body_battery_high', label: 'Body Battery (max)', unit: '', source: 'wellness', color: '#3B82F6' },
-  { key: 'calories_total', label: 'Calories', unit: 'kcal', source: 'wellness', color: '#F59E0B' },
+  { key: 'hrv_ms', label: 'HRV', unit: 'ms', source: 'metrics', color: '#2E8B57' },
+  { key: 'resting_heart_rate', label: 'FC repos', unit: 'bpm', source: 'metrics', color: '#DC4437' },
+  { key: 'sleep_minutes', label: 'Sommeil', unit: 'h', source: 'metrics', color: '#4F86A8', transform: (v) => Math.round((v / 60) * 10) / 10 },
+  { key: 'weight_kg', label: 'Poids', unit: 'kg', source: 'wellness', color: '#7C6FA8' },
+  { key: 'vo2max', label: 'VO2max', unit: '', source: 'wellness', color: '#FF4500' },
+  { key: 'steps', label: 'Pas', unit: '', source: 'wellness', color: '#2E8B57' },
+  { key: 'body_battery_high', label: 'Body Battery (max)', unit: '', source: 'wellness', color: '#4F86A8' },
+  { key: 'calories_total', label: 'Calories', unit: 'kcal', source: 'wellness', color: '#FF4500' },
 ];
 
 export default function TrendsChart() {
@@ -104,14 +104,14 @@ export default function TrendsChart() {
                   <stop offset="100%" stopColor={selected.color} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid stroke="#1A2238" strokeDasharray="3 3" vertical={false} />
+              <CartesianGrid stroke="#334155" strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="date" tick={{ fill: '#94A3B8', fontSize: 10 }}
-                     tickLine={false} axisLine={{ stroke: '#1A2238' }} minTickGap={30} />
+                     tickLine={false} axisLine={{ stroke: '#334155' }} minTickGap={30} />
               <YAxis tick={{ fill: '#94A3B8', fontSize: 10 }} tickLine={false}
                      axisLine={false} domain={['auto', 'auto']} />
               <Tooltip
                 contentStyle={{
-                  background: '#12192C',
+                  background: '#1E293B',
                   border: '1px solid rgba(255,255,255,0.08)',
                   borderRadius: 12,
                   fontSize: 12,

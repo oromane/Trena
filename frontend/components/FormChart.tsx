@@ -37,9 +37,9 @@ export default function FormChart({ data }: { data: FormPoint[] }) {
             fontSize: 12,
           }}
         />
-        <Line type="monotone" dataKey="fitness" stroke="#34d399" dot={false} name="Aptitude" />
-        <Line type="monotone" dataKey="fatigue" stroke="#f87171" dot={false} name="Fatigue" />
-        <Line type="monotone" dataKey="form" stroke="#60a5fa" dot={false} name="Forme" />
+        <Line type="monotone" dataKey="fitness" stroke="#2E8B57" dot={false} name="Aptitude" />
+        <Line type="monotone" dataKey="fatigue" stroke="#FF4500" dot={false} name="Fatigue" />
+        <Line type="monotone" dataKey="form" stroke="#CBD5E1" dot={false} name="Forme" />
       </LineChart>
     </ResponsiveContainer>
   );

@@ -11,6 +11,7 @@ import LoadChart from '@/components/dashboard/LoadChart';
 import HistoryTimeline from '@/components/dashboard/HistoryTimeline';
 import InsightsCard from '@/components/dashboard/InsightsCard';
 import RaceWeekCard from '@/components/dashboard/RaceWeekCard';
+import InfoTooltip from '@/components/InfoTooltip';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { ensureProfile } from '@/app/actions';
 import {
@@ -48,10 +49,17 @@ function calendarMessage(flag?: string) {
   return CALENDAR_MESSAGES[flag];
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+function SectionLabel({
+  children,
+  info,
+}: {
+  children: React.ReactNode;
+  info?: React.ReactNode;
+}) {
   return (
-    <h2 className="mb-3 text-[11px] font-medium uppercase tracking-[0.25em] text-ats-gray">
+    <h2 className="mb-3 flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.25em] text-ats-gray">
       {children}
+      {info}
     </h2>
   );
 }
@@ -161,7 +169,18 @@ export default async function DashboardPage({
           {/* TRAJECTOIRE + PROBABILITÉ */}
           <section className="grid gap-4 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <SectionLabel>Trajectoire · modèle de Banister</SectionLabel>
+              <SectionLabel
+                info={
+                  <InfoTooltip title="Modèle de Banister">
+                    Modèle Fitness-Fatigue : chaque séance ajoute de l&apos;aptitude
+                    (décroissance lente, ~42 j) et de la fatigue (décroissance rapide,
+                    ~7 j). La Forme = aptitude − fatigue, prédit ta capacité à
+                    performer. Trena projette ces 3 courbes jusqu&apos;au jour J.
+                  </InfoTooltip>
+                }
+              >
+                Trajectoire · modèle de Banister
+              </SectionLabel>
               <div className="card p-5">
                 <TrajectoryChart
                   trajectory={summary.trajectory}
@@ -170,7 +189,17 @@ export default async function DashboardPage({
               </div>
             </div>
             <div>
-              <SectionLabel>Probabilité</SectionLabel>
+              <SectionLabel
+                info={
+                  <InfoTooltip title="Probabilité de réussite">
+                    Estimation déterministe de tes chances d&apos;atteindre ton chrono
+                    cible : adhérence au plan (50 %) + fraîcheur Banister (30 %) +
+                    disponibilité du jour (20 %).
+                  </InfoTooltip>
+                }
+              >
+                Probabilité
+              </SectionLabel>
               <ProbabilityCard probability={summary.probability} />
             </div>
           </section>
@@ -195,7 +224,17 @@ export default async function DashboardPage({
               </div>
             </div>
             <div>
-              <SectionLabel>Analyse</SectionLabel>
+              <SectionLabel
+                info={
+                  <InfoTooltip title="Analyse">
+                    Insights déterministes : chaque conclusion (tendance HRV,
+                    monotonie de Foster, adhérence) est calculée directement à partir
+                    de tes données, sans boîte noire ni modèle opaque.
+                  </InfoTooltip>
+                }
+              >
+                Analyse
+              </SectionLabel>
               <InsightsCard insights={summary.insights} />
             </div>
           </section>

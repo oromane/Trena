@@ -3,6 +3,7 @@
  */
 import { Activity, HeartPulse, Moon, Zap } from 'lucide-react';
 import type { DashboardSummary, MetricBlock } from '@/lib/engine';
+import InfoTooltip from '@/components/InfoTooltip';
 
 type Def = {
   key: keyof DashboardSummary['physio'];
@@ -12,6 +13,8 @@ type Def = {
   higherIsBetter: boolean;
   explain: string;
   impact: string;
+  calc: string;
+  interpret: (value: number | null, block: MetricBlock) => string;
   format?: (v: number) => string;
 };
 
@@ -24,6 +27,13 @@ const DEFS: Def[] = [
     higherIsBetter: true,
     explain: 'Variabilité cardiaque au réveil : ton signal de récupération n°1.',
     impact: 'Pilote la décision quotidienne : intensité maintenue ou réduite.',
+    calc: 'Variabilité des intervalles entre battements (rMSSD, en ms), mesurée la nuit par la montre. Comparée à ta ligne de base sur 28 jours via un z-score.',
+    interpret: (v, b) => {
+      if (v == null || b.baseline == null) return 'Établis ta norme sur ~28 jours pour une interprétation fiable.';
+      if (v >= b.baseline) return 'Au niveau ou au-dessus de ta norme : bonne récupération.';
+      if (v >= b.baseline * 0.92) return 'Légèrement sous ta norme : vigilance.';
+      return 'Nettement sous ta norme : fatigue ou stress accumulé.';
+    },
   },
   {
     key: 'sleep',
@@ -33,6 +43,15 @@ const DEFS: Def[] = [
     higherIsBetter: true,
     explain: 'Durée de sommeil vs ta moyenne 28 jours.',
     impact: 'Un déficit cumulé à un HRV bas déclenche la bascule basse intensité.',
+    calc: 'Durée totale de sommeil détectée par la montre (cycles profond, léger, paradoxal), en minutes puis convertie en heures.',
+    interpret: (v) => {
+      if (v == null) return 'Aucune donnée de sommeil.';
+      const h = v / 60;
+      if (h < 6) return `${h.toFixed(1)} h : dette de sommeil (< 6 h).`;
+      if (h < 7) return `${h.toFixed(1)} h : court (6–7 h).`;
+      if (h <= 9) return `${h.toFixed(1)} h : optimal (7–9 h).`;
+      return `${h.toFixed(1)} h : long (> 9 h).`;
+    },
     format: (v) => (v / 60).toFixed(1),
   },
   {
@@ -43,6 +62,13 @@ const DEFS: Def[] = [
     higherIsBetter: false,
     explain: 'Fréquence cardiaque au repos : monte avec fatigue ou maladie.',
     impact: 'Tendance haussière = signal précoce de surcharge.',
+    calc: 'Fréquence cardiaque la plus basse mesurée sur 24 h (repos/sommeil), en battements par minute.',
+    interpret: (v, b) => {
+      if (v == null || b.baseline == null) return 'Compare à ta moyenne 28 jours une fois établie.';
+      if (v <= b.baseline) return 'Au niveau ou sous ta norme : bon signe.';
+      if (v <= b.baseline + 3) return 'Légèrement élevée vs ta norme.';
+      return 'Élevée vs ta norme : fatigue ou début de maladie possible.';
+    },
   },
   {
     key: 'stress',
@@ -52,6 +78,14 @@ const DEFS: Def[] = [
     higherIsBetter: false,
     explain: 'Score de stress physiologique de ta montre.',
     impact: 'Stress chronique = récupération ralentie entre les séances.',
+    calc: 'Score Garmin de 0 à 100 dérivé de la variabilité cardiaque au repos, moyenné sur la journée.',
+    interpret: (v) => {
+      if (v == null) return 'Aucune donnée de stress.';
+      if (v <= 25) return `${Math.round(v)}/100 : repos (0–25).`;
+      if (v <= 50) return `${Math.round(v)}/100 : bas (26–50), bonne disponibilité.`;
+      if (v <= 75) return `${Math.round(v)}/100 : moyen (51–75), récupération partielle.`;
+      return `${Math.round(v)}/100 : élevé (76–100), charge de stress importante.`;
+    },
   },
 ];
 
@@ -91,6 +125,12 @@ export default function PhysioGrid({ physio }: { physio: DashboardSummary['physi
               <div className="flex items-center gap-2 text-ats-muted">
                 <Icon className="h-4 w-4" />
                 <span className="text-xs font-medium uppercase tracking-wider">{d.label}</span>
+                <InfoTooltip title={d.label}>
+                  <span className="block">{d.calc}</span>
+                  <span className="mt-1.5 block font-medium text-ats-text/90">
+                    {d.interpret(value ?? null, block)}
+                  </span>
+                </InfoTooltip>
               </div>
               <Delta block={block} higherIsBetter={d.higherIsBetter} />
             </div>

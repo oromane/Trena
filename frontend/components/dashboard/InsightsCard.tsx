@@ -6,9 +6,9 @@ import { AlertTriangle, CheckCircle2, Info, Sparkles } from 'lucide-react';
 import type { DashboardSummary } from '@/lib/engine';
 
 const SEVERITY = {
-  positive: { icon: CheckCircle2, color: '#00E676' },
-  info: { icon: Info, color: '#3B82F6' },
-  warning: { icon: AlertTriangle, color: '#F59E0B' },
+  positive: { icon: CheckCircle2, color: '#2E8B57' },
+  info: { icon: Info, color: '#4F86A8' },
+  warning: { icon: AlertTriangle, color: '#FF4500' },
 } as const;
 
 export default function InsightsCard({

@@ -10,9 +10,9 @@ import { useEffect, useState } from 'react';
 const RING = { size: 210, stroke: 11, r: 92 };
 
 const STATE: Record<string, { label: string; sub: string; color: string }> = {
-  NORMAL: { label: 'Excellent', sub: 'Prêt à performer', color: '#00E676' },
-  CAUTION: { label: 'Vigilance', sub: 'Intensité plafonnée', color: '#F59E0B' },
-  REDUCE: { label: 'Récupération', sub: 'Protège ton objectif', color: '#EF4444' },
+  NORMAL: { label: 'Excellent', sub: 'Prêt à performer', color: '#2E8B57' },
+  CAUTION: { label: 'Vigilance', sub: 'Intensité plafonnée', color: '#FF4500' },
+  REDUCE: { label: 'Récupération', sub: 'Protège ton objectif', color: '#DC4437' },
 };
 
 /** Ligne ECG animée : le pouls de Trena. */
@@ -147,7 +147,7 @@ export default function Hero({
               cy={RING.size / 2}
               r={RING.r}
               fill="none"
-              stroke="#1A2238"
+              stroke="#334155"
               strokeWidth={RING.stroke}
             />
             <motion.circle
@@ -155,7 +155,7 @@ export default function Hero({
               cy={RING.size / 2}
               r={RING.r}
               fill="none"
-              stroke={pct >= 70 ? '#00E676' : pct >= 50 ? '#F59E0B' : '#EF4444'}
+              stroke={pct >= 70 ? '#2E8B57' : pct >= 50 ? '#FF4500' : '#DC4437'}
               strokeWidth={RING.stroke}
               strokeLinecap="round"
               strokeDasharray={circumference}
