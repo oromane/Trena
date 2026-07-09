@@ -146,12 +146,16 @@ export async function purgeCalendar() {
 // ----------------------------------------------------------------- Séances
 export async function rescheduleSession(formData: FormData) {
   const { user } = await requireUser();
-  await engineFetch('/sessions/reschedule', {
-    user_id: user.id,
-    session_id: String(formData.get('session_id')),
-    new_date: String(formData.get('new_date')),
-    new_time: formData.get('new_time') ? String(formData.get('new_time')) : null,
-  });
+  try {
+    await engineFetch('/sessions/reschedule', {
+      user_id: user.id,
+      session_id: String(formData.get('session_id')),
+      new_date: String(formData.get('new_date')),
+      new_time: formData.get('new_time') ? String(formData.get('new_time')) : null,
+    });
+  } catch (e) {
+    console.error('rescheduleSession:', e);
+  }
   revalidatePath('/dashboard');
 }
 
@@ -211,16 +215,26 @@ export async function updateSession(formData: FormData) {
       body.duration_minutes = Number(formData.get('duration_minutes'));
     if (formData.get('title') !== null) body.title = String(formData.get('title'));
   }
-  await engineFetch('/sessions/update', body);
+  try {
+    await engineFetch('/sessions/update', body);
+  } catch (e) {
+    console.error('updateSession:', e);
+  }
   revalidatePath('/dashboard');
 }
 
 export async function deleteSession(formData: FormData) {
   const { user } = await requireUser();
-  await engineFetch('/sessions/delete', {
-    user_id: user.id,
-    session_id: String(formData.get('session_id')),
-  });
+  try {
+    await engineFetch('/sessions/delete', {
+      user_id: user.id,
+      session_id: String(formData.get('session_id')),
+    });
+  } catch (e) {
+    // Séance déjà supprimée / introuvable : suppression idempotente,
+    // on ne fait pas planter la page pour autant.
+    console.error('deleteSession:', e);
+  }
   revalidatePath('/dashboard');
 }
 
