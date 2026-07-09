@@ -63,6 +63,30 @@ export interface SessionComparison {
   avg_hr?: number;
 }
 
+export interface ActivityMetrics {
+  distance_m?: number;
+  duration_s?: number;
+  moving_duration_s?: number;
+  elapsed_duration_s?: number;
+  avg_pace_s_per_km?: number;
+  best_pace_s_per_km?: number;
+  elevation_gain_m?: number;
+  elevation_loss_m?: number;
+  calories?: number;
+  avg_hr?: number;
+  max_hr?: number;
+  hr_time_in_zone_s?: number[];
+  avg_cadence_spm?: number;
+  max_cadence_spm?: number;
+  avg_stride_length_cm?: number;
+  training_effect_aerobic?: number;
+  training_effect_anaerobic?: number;
+  min_temperature_c?: number;
+  max_temperature_c?: number;
+  start_elevation_m?: number;
+  vo2max?: number;
+}
+
 export interface SessionRow {
   id: string;
   scheduled_date: string;
@@ -76,6 +100,7 @@ export interface SessionRow {
   distance_m?: number | null;
   avg_hr?: number | null;
   comparison?: SessionComparison | null;
+  activity_metrics?: ActivityMetrics | null;
 }
 
 export interface ZonePace {

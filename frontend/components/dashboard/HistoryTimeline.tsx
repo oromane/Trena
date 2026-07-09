@@ -121,6 +121,22 @@ export default function HistoryTimeline({
                         {s.comparison.avg_hr && <> · FC moy {s.comparison.avg_hr} bpm</>}
                       </p>
                     )}
+                    {s.activity_metrics && (() => {
+                      const m = s.activity_metrics;
+                      const parts: string[] = [];
+                      if (m.distance_m) parts.push(`${(m.distance_m / 1000).toFixed(2)} km`);
+                      if (m.avg_pace_s_per_km)
+                        parts.push(
+                          `${Math.floor(m.avg_pace_s_per_km / 60)}:${String(m.avg_pace_s_per_km % 60).padStart(2, '0')}/km`
+                        );
+                      if (m.elevation_gain_m) parts.push(`D+${m.elevation_gain_m} m`);
+                      if (m.avg_cadence_spm) parts.push(`${m.avg_cadence_spm} spm`);
+                      if (m.calories) parts.push(`${m.calories} kcal`);
+                      if (m.training_effect_aerobic) parts.push(`TE ${m.training_effect_aerobic}`);
+                      return parts.length ? (
+                        <p className="metric mt-0.5 text-[11px] text-ats-gray">{parts.join(' · ')}</p>
+                      ) : null;
+                    })()}
                   </div>
                   {trimpDelta != null && (
                     <span

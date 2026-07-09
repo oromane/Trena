@@ -271,6 +271,54 @@ RUNNING_TYPES = {
 }
 
 
+def _pace_s_per_km(speed_m_s) -> int | None:
+    """Allure (s/km) depuis une vitesse (m/s)."""
+    return round(1000 / speed_m_s) if isinstance(speed_m_s, (int, float)) and speed_m_s else None
+
+
+def extract_activity_metrics(a: dict) -> dict:
+    """Métriques riches d'une activité Garmin (type Strava) → blob JSONB.
+
+    Toutes les valeurs absentes sont écartées. Le vecteur de temps par zone
+    de FC (hrTimeInZone_1..5) est la base d'un futur TRIMP zonal.
+    """
+    def num(v, nd: int | None = None):
+        if not isinstance(v, (int, float)):
+            return None
+        return round(v, nd) if nd is not None else round(v)
+
+    zones = [a.get(f"hrTimeInZone_{z}") for z in range(1, 6)]
+    metrics = {
+        # Base
+        "distance_m": num(a.get("distance")),
+        "duration_s": num(a.get("duration")),
+        "moving_duration_s": num(a.get("movingDuration")),
+        "elapsed_duration_s": num(a.get("elapsedDuration")),
+        "avg_pace_s_per_km": _pace_s_per_km(a.get("averageSpeed")),
+        "best_pace_s_per_km": _pace_s_per_km(a.get("maxSpeed")),
+        "elevation_gain_m": num(a.get("elevationGain")),
+        "elevation_loss_m": num(a.get("elevationLoss")),
+        "calories": num(a.get("calories")),
+        # Cardiaque
+        "avg_hr": num(a.get("averageHR")),
+        "max_hr": num(a.get("maxHR")),
+        "hr_time_in_zone_s": [num(z) for z in zones] if any(z is not None for z in zones) else None,
+        # Dynamique de course
+        "avg_cadence_spm": num(a.get("averageRunningCadenceInStepsPerMinute")),
+        "max_cadence_spm": num(a.get("maxRunningCadenceInStepsPerMinute")),
+        "avg_stride_length_cm": num(a.get("avgStrideLength"), 1),
+        "training_effect_aerobic": num(a.get("aerobicTrainingEffect"), 1),
+        "training_effect_anaerobic": num(a.get("anaerobicTrainingEffect"), 1),
+        # Environnement
+        "min_temperature_c": num(a.get("minTemperature"), 1),
+        "max_temperature_c": num(a.get("maxTemperature"), 1),
+        "start_elevation_m": num(a.get("minElevation"), 1),
+        # Évolution
+        "vo2max": num(a.get("vO2MaxValue"), 1),
+    }
+    return {k: v for k, v in metrics.items() if v is not None}
+
+
 def import_activities(repo, client: GarminClient, user_id: str,
                       days: int = 14, until: date | None = None,
                       hr_rest: float = 60.0, hr_max: float = 190.0,
@@ -319,6 +367,7 @@ def import_activities(repo, client: GarminClient, user_id: str,
             "distance_m": round(a["distance"]) if a.get("distance") else None,
             "avg_hr": round(avg_hr) if avg_hr else None,
             "garmin_activity_id": activity_id,
+            "activity_metrics": extract_activity_metrics(a) or None,
         }
 
         planned = repo.get_session_for_date(user_id, date.fromisoformat(day_str))
