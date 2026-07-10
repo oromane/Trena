@@ -36,6 +36,18 @@ function relativeDay(dateStr: string, today: string): string {
   return new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 }
 
+function StatCell({ label, value, unit }: { label: string; value: string; unit?: string }) {
+  return (
+    <div className="rounded-xl bg-ats-card2 p-3">
+      <p className="text-[10px] uppercase tracking-wider text-ats-muted">{label}</p>
+      <p className="metric mt-1 text-lg font-semibold">
+        {value}
+        {unit && <span className="ml-1 text-[11px] font-normal text-ats-muted">{unit}</span>}
+      </p>
+    </div>
+  );
+}
+
 export default function HistoryTimeline({
   history,
   today,
@@ -43,12 +55,45 @@ export default function HistoryTimeline({
   history: DashboardSummary['history'];
   today: string;
 }) {
+  const completed = history.filter((s) => s.status === 'COMPLETED');
+  const km = completed.reduce(
+    (a, s) => a + (s.activity_metrics?.distance_m ?? s.distance_m ?? 0) / 1000,
+    0
+  );
+  const trimp = completed.reduce((a, s) => a + (s.trimp_actual ?? 0), 0);
+  const minutes = completed.reduce((a, s) => a + (s.duration_actual_minutes ?? 0), 0);
+  const withHr = completed.filter((s) => s.comparison?.avg_hr || s.activity_metrics?.avg_hr);
+  const avgHr = withHr.length
+    ? Math.round(
+        withHr.reduce((a, s) => a + (s.comparison?.avg_hr ?? s.activity_metrics?.avg_hr ?? 0), 0) /
+          withHr.length
+      )
+    : null;
+
   return (
     <div className="card p-6">
       <div className="flex items-center gap-2 text-ats-muted">
         <History className="h-4 w-4" />
         <span className="text-[11px] font-medium uppercase tracking-[0.2em]">Historique</span>
       </div>
+
+      {completed.length > 0 && (
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <StatCell label="Réalisées" value={String(completed.length)} />
+          <StatCell label="Distance" value={km.toFixed(1)} unit="km" />
+          <StatCell
+            label="Durée"
+            value={minutes >= 60 ? `${Math.floor(minutes / 60)}h${String(minutes % 60).padStart(2, '0')}` : String(minutes)}
+            unit={minutes >= 60 ? '' : 'min'}
+          />
+          <StatCell label="Charge" value={String(trimp)} unit="TRIMP" />
+        </div>
+      )}
+      {avgHr && (
+        <p className="metric mt-2 text-[11px] text-ats-gray">
+          FC moyenne sur la période : {avgHr} bpm · {completed.length} séance(s)
+        </p>
+      )}
 
       {history.length === 0 ? (
         <p className="mt-4 text-sm text-ats-muted">

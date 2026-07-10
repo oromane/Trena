@@ -59,6 +59,55 @@ export async function createObjective(formData: FormData) {
   revalidatePath('/objectives');
 }
 
+/** Modifie / personnalise un objectif existant. */
+export async function updateObjective(formData: FormData) {
+  const { supabase, user } = await requireUser();
+  const { error } = await supabase
+    .from('objectives')
+    .update({
+      title: String(formData.get('title')),
+      target_date: String(formData.get('target_date')),
+      sport_type: String(formData.get('sport_type')),
+      target_time_seconds: formData.get('target_time_minutes')
+        ? Number(formData.get('target_time_minutes')) * 60
+        : null,
+      distance_m: formData.get('distance_km')
+        ? Math.round(Number(formData.get('distance_km')) * 1000)
+        : null,
+    })
+    .eq('id', String(formData.get('id')))
+    .eq('user_id', user.id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/objectives');
+  revalidatePath('/dashboard');
+}
+
+/** Active ou désactive un objectif (l'actif pilote le plan et le cockpit). */
+export async function setObjectiveActive(formData: FormData) {
+  const { supabase, user } = await requireUser();
+  const { error } = await supabase
+    .from('objectives')
+    .update({ is_active: formData.get('active') === 'true' })
+    .eq('id', String(formData.get('id')))
+    .eq('user_id', user.id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/objectives');
+  revalidatePath('/dashboard');
+}
+
+/** Supprime un objectif (ses séances rattachées partent en cascade). */
+export async function deleteObjective(formData: FormData) {
+  const { supabase, user } = await requireUser();
+  const { error } = await supabase
+    .from('objectives')
+    .delete()
+    .eq('id', String(formData.get('id')))
+    .eq('user_id', user.id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/objectives');
+  revalidatePath('/dashboard');
+}
+
 export async function saveDailyMetrics(formData: FormData) {
   const { supabase, user } = await requireUser();
   const { error } = await supabase.from('daily_metrics').upsert(
