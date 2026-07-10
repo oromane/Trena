@@ -180,10 +180,12 @@ class GarminClient:
 
         try:
             summary = self._g.get_user_summary(iso) or {}
-            out["resting_heart_rate"] = summary.get("restingHeartRate")
+            rhr = summary.get("restingHeartRate")
+            if isinstance(rhr, (int, float)):
+                out["resting_heart_rate"] = int(round(rhr))
             stress = summary.get("averageStressLevel")
-            if stress is not None and stress >= 0:
-                out["stress_score"] = stress
+            if isinstance(stress, (int, float)) and stress >= 0:
+                out["stress_score"] = int(round(stress))
         except Exception:
             pass
 
@@ -227,15 +229,17 @@ class GarminClient:
         }
 
         try:
+            def _i(v):  # Garmin renvoie parfois des floats (2188.0) → colonnes INT
+                return int(round(v)) if isinstance(v, (int, float)) else None
             s = self._g.get_user_summary(iso) or {}
-            out["steps"] = s.get("totalSteps")
-            out["calories_total"] = s.get("totalKilocalories")
-            out["floors_climbed"] = s.get("floorsAscended")
-            out["body_battery_high"] = s.get("bodyBatteryHighestValue")
-            out["body_battery_low"] = s.get("bodyBatteryLowestValue")
+            out["steps"] = _i(s.get("totalSteps"))
+            out["calories_total"] = _i(s.get("totalKilocalories"))
+            out["floors_climbed"] = _i(s.get("floorsAscended"))
+            out["body_battery_high"] = _i(s.get("bodyBatteryHighestValue"))
+            out["body_battery_low"] = _i(s.get("bodyBatteryLowestValue"))
             mod = s.get("moderateIntensityMinutes") or 0
             vig = s.get("vigorousIntensityMinutes") or 0
-            out["intensity_minutes"] = (mod + vig) or None
+            out["intensity_minutes"] = _i(mod + vig) or None
         except Exception:
             pass
 
