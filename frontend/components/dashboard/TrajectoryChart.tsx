@@ -25,7 +25,7 @@ export default function TrajectoryChart({
   targetDate: string | null;
 }) {
   const start = new Date(trajectory.start_date);
-  const data = trajectory.form.map((_, i) => {
+  const allData = trajectory.form.map((_, i) => {
     const d = new Date(start.getTime() + i * 86400000);
     return {
       date: d.toISOString().slice(0, 10),
@@ -35,7 +35,13 @@ export default function TrajectoryChart({
       form: trajectory.form[i],
     };
   });
-  const todayLabel = data[trajectory.today_index]?.label;
+  // Rogner la période vide en tête : commencer aux premières données réelles
+  // (fitness/fatigue non nuls), avec 3 jours de marge pour le contexte.
+  let firstIdx = trajectory.fitness.findIndex((v, i) => v > 0 || trajectory.fatigue[i] > 0);
+  if (firstIdx < 0) firstIdx = 0;
+  firstIdx = Math.max(0, firstIdx - 3);
+  const data = allData.slice(firstIdx);
+  const todayLabel = allData[trajectory.today_index]?.label;
 
   const ti = trajectory.today_index;
   const curFit = trajectory.fitness[ti] ?? 0;
