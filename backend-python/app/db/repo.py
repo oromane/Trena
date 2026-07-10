@@ -129,7 +129,15 @@ class SupabaseRepo:
 
     # ----------------------------------------------------------- daily_metrics
     def upsert_daily_metrics(self, user_id: str, metrics: list[dict]) -> list[dict]:
-        payload = [{**m, "user_id": user_id} for m in metrics]
+        if not metrics:
+            return []
+        # PostgREST exige des clés identiques sur toutes les lignes d'un upsert
+        # groupé (PGRST102) : on complète les clés manquantes avec None.
+        all_keys: set[str] = set()
+        for m in metrics:
+            all_keys.update(m.keys())
+        base = {k: None for k in all_keys}
+        payload = [{**base, **m, "user_id": user_id} for m in metrics]
         return self._post(
             "/daily_metrics?on_conflict=user_id,recorded_date",
             payload,
@@ -243,7 +251,14 @@ class SupabaseRepo:
 
     # ---------------------------------------------------------- garmin_wellness
     def upsert_wellness(self, user_id: str, rows: list[dict]) -> list[dict]:
-        payload = [{**r, "user_id": user_id} for r in rows]
+        if not rows:
+            return []
+        # Clés identiques requises sur toutes les lignes (PGRST102).
+        all_keys: set[str] = set()
+        for r in rows:
+            all_keys.update(r.keys())
+        base = {k: None for k in all_keys}
+        payload = [{**base, **r, "user_id": user_id} for r in rows]
         return self._post(
             "/garmin_wellness?on_conflict=user_id,recorded_date",
             payload,
