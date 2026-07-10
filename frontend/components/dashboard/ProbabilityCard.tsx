@@ -28,11 +28,24 @@ const COMPONENTS = [
   },
 ];
 
+const ADVICE: Record<string, string> = {
+  adherence: 'réalise les séances prévues — c’est le facteur n°1.',
+  form_score: 'respecte les jours de repos pour faire remonter ta fraîcheur.',
+  readiness_factor: 'soigne sommeil et récupération pour ta disponibilité.',
+};
+
 export default function ProbabilityCard({
   probability,
 }: {
   probability: DashboardSummary['probability'];
 }) {
+  const lever = COMPONENTS
+    .map((c) => {
+      const ratio = Math.max(0, Math.min(1, c.toRatio(probability)));
+      return { key: c.key, label: c.label, potential: (parseInt(c.weight) / 100) * (1 - ratio) };
+    })
+    .reduce((a, b) => (b.potential > a.potential ? b : a));
+
   return (
     <div className="card flex h-full flex-col p-6">
       <div className="flex items-center gap-2 text-ats-muted">
@@ -71,7 +84,14 @@ export default function ProbabilityCard({
         })}
       </div>
 
-      <ul className="mt-5 space-y-1.5 border-t border-white/5 pt-4">
+      {lever.potential > 0.02 && (
+        <div className="mt-4 rounded-lg border border-ats-green/20 bg-ats-green/5 px-3 py-2 text-[11px] leading-relaxed">
+          <span className="font-semibold text-ats-green">Levier le plus fort — {lever.label} : </span>
+          <span className="text-ats-muted">{ADVICE[lever.key]}</span>
+        </div>
+      )}
+
+      <ul className="mt-4 space-y-1.5 border-t border-white/5 pt-4">
         {probability.explanation.map((e, i) => (
           <li key={i} className="text-[11px] leading-relaxed text-ats-muted">
             {e}

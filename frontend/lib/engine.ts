@@ -146,6 +146,7 @@ export interface DashboardSummary {
   readiness: { level: 'NORMAL' | 'CAUTION' | 'REDUCE'; hrv_zscore: number | null; detail: string };
   today_session: SessionRow | null;
   workout: Workout | null;
+  last_metric_date?: string | null;
   physio: {
     hrv: MetricBlock | null;
     sleep: MetricBlock | null;

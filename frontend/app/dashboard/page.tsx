@@ -11,15 +11,27 @@ import LoadChart from '@/components/dashboard/LoadChart';
 import HistoryTimeline from '@/components/dashboard/HistoryTimeline';
 import InsightsCard from '@/components/dashboard/InsightsCard';
 import RaceWeekCard from '@/components/dashboard/RaceWeekCard';
+import OnboardingCard from '@/components/dashboard/OnboardingCard';
 import InfoTooltip from '@/components/InfoTooltip';
+import Link from 'next/link';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { ensureProfile } from '@/app/actions';
 import {
   getCalendarStatus,
   getDashboardSummary,
+  getGarminStatus,
   getWorkoutLibrary,
   getWorkoutTemplates,
 } from '@/lib/engine';
+
+function freshnessLabel(dateStr: string, today: string): string {
+  const diff = Math.round(
+    (new Date(today).getTime() - new Date(dateStr).getTime()) / 86400000
+  );
+  if (diff <= 0) return "aujourd'hui";
+  if (diff === 1) return 'hier';
+  return `il y a ${diff} jours`;
+}
 
 const CALENDAR_MESSAGES: Record<string, { text: string; ok: boolean }> = {
   linked: { text: 'Google Calendar lié avec succès.', ok: true },
@@ -81,14 +93,25 @@ export default async function DashboardPage({
     getCalendarStatus(user!.id),
     supabase.from('profiles').select('full_name').eq('id', user!.id).maybeSingle(),
   ]);
-  const [templates, library] = await Promise.all([
+  const [templates, library, garminStatus] = await Promise.all([
     getWorkoutTemplates(),
     getWorkoutLibrary(user!.id),
+    getGarminStatus(user!.id),
   ]);
 
   const rawName = user?.email?.split('@')[0] ?? 'athlète';
   const fallback = rawName.charAt(0).toUpperCase() + rawName.slice(1).split('.')[0];
   const name = profile?.full_name?.split(' ')[0] || fallback;
+
+  const hasObjective = !!summary?.objective;
+  const garminLinked = garminStatus.linked;
+  const weekSessions = summary?.week.flatMap((d) => d.sessions) ?? [];
+  const weekPlanned = weekSessions.length;
+  const weekDone = weekSessions.filter((s) => s.status === 'COMPLETED').length;
+  const hasSessions = !!summary
+    && (summary.history.length > 0
+      || summary.week.some((d) => d.sessions.length > 0)
+      || !!summary.today_session);
 
   if (!summary) {
     return (
@@ -135,6 +158,17 @@ export default async function DashboardPage({
         />
 
         <div className="mx-auto max-w-6xl space-y-12 px-6">
+          {/* AMORÇAGE (affiché seulement si incomplet) */}
+          {(!hasObjective || !garminLinked || !hasSessions) && (
+            <section>
+              <OnboardingCard
+                hasObjective={hasObjective}
+                garminLinked={garminLinked}
+                hasSessions={hasSessions}
+              />
+            </section>
+          )}
+
           {/* MODE COURSE (J-7 → J-0) */}
           {summary.race_week && (
             <section>
@@ -143,16 +177,23 @@ export default async function DashboardPage({
             </section>
           )}
 
-          {/* ÉTAT PHYSIOLOGIQUE */}
-          <section>
-            <SectionLabel>État physiologique</SectionLabel>
-            <PhysioGrid physio={summary.physio} />
-          </section>
-
-          {/* DÉCISION DU JOUR */}
+          {/* DÉCISION DU JOUR (juste sous le hero) */}
           <section className="grid gap-4 lg:grid-cols-5">
             <div className="lg:col-span-3">
-              <SectionLabel>Séance recommandée</SectionLabel>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="text-[11px] font-medium uppercase tracking-[0.25em] text-ats-gray">
+                  Séance recommandée
+                </h2>
+                {weekPlanned > 0 && (
+                  <span className="metric text-[11px] text-ats-muted">
+                    Cette semaine :{' '}
+                    <span className={weekDone >= weekPlanned ? 'text-ats-green' : 'text-ats-text'}>
+                      {weekDone}/{weekPlanned}
+                    </span>{' '}
+                    séances
+                  </span>
+                )}
+              </div>
               <SessionCard
                 session={summary.today_session}
                 workout={summary.workout}
@@ -168,6 +209,25 @@ export default async function DashboardPage({
                 today={summary.date}
               />
             </div>
+          </section>
+
+          {/* ÉTAT PHYSIOLOGIQUE */}
+          <section>
+            <SectionLabel>État physiologique</SectionLabel>
+            {summary.last_metric_date && (
+              <p className="-mt-2 mb-3 text-[11px] text-ats-gray">
+                Dernières données : {freshnessLabel(summary.last_metric_date, summary.date)}
+                {summary.physio.hrv?.today == null && (
+                  <>
+                    {' · '}
+                    <Link href="/metrics" className="text-ats-green hover:underline">
+                      synchroniser Garmin
+                    </Link>
+                  </>
+                )}
+              </p>
+            )}
+            <PhysioGrid physio={summary.physio} />
           </section>
 
           {/* TRAJECTOIRE + PROBABILITÉ */}

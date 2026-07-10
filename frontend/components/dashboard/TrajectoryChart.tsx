@@ -37,6 +37,18 @@ export default function TrajectoryChart({
   });
   const todayLabel = data[trajectory.today_index]?.label;
 
+  const ti = trajectory.today_index;
+  const curFit = trajectory.fitness[ti] ?? 0;
+  const curFat = trajectory.fatigue[ti] ?? 0;
+  const curForm = trajectory.form[ti] ?? 0;
+  const raceForm = data.length ? data[data.length - 1].form : 0;
+  const formTone =
+    curForm > 5
+      ? { label: 'Frais (affûté)', color: '#2E8B57' }
+      : curForm < -10
+        ? { label: 'Charge lourde', color: '#FF4500' }
+        : { label: 'Équilibré', color: '#BED0D0' };
+
   if (data.every((d) => d.fitness === 0)) {
     return (
       <p className="px-1 py-8 text-sm text-ats-muted">
@@ -47,7 +59,39 @@ export default function TrajectoryChart({
   }
 
   return (
-    <div className="h-72 w-full">
+    <div className="w-full">
+      <div className="mb-3 flex flex-wrap items-end gap-x-6 gap-y-2">
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-ats-muted">Forme (TSB)</p>
+          <p className="metric text-2xl font-semibold leading-none">
+            {curForm > 0 ? '+' : ''}
+            {Math.round(curForm)}
+            <span className="ml-2 text-xs font-normal" style={{ color: formTone.color }}>
+              {formTone.label}
+            </span>
+          </p>
+        </div>
+        <div className="flex gap-4 text-[11px]">
+          <span>
+            <span className="text-ats-muted">Fitness </span>
+            <span className="metric font-medium" style={{ color: '#2E8B57' }}>{Math.round(curFit)}</span>
+          </span>
+          <span>
+            <span className="text-ats-muted">Fatigue </span>
+            <span className="metric font-medium" style={{ color: '#FF4500' }}>{Math.round(curFat)}</span>
+          </span>
+        </div>
+        {targetDate && (
+          <span className="ml-auto text-[11px] text-ats-gray">
+            Forme projetée jour J :{' '}
+            <span className="metric font-medium text-ats-text">
+              {raceForm > 0 ? '+' : ''}
+              {Math.round(raceForm)}
+            </span>
+          </span>
+        )}
+      </div>
+      <div className="h-64 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
           <defs>
@@ -111,6 +155,13 @@ export default function TrajectoryChart({
             fill="url(#gForm)"
             dot={false}
           />
+          <ReferenceLine
+            y={0}
+            stroke="#94A3B8"
+            strokeDasharray="2 4"
+            strokeOpacity={0.4}
+            label={{ value: 'frais', fill: '#94A3B8', fontSize: 9, position: 'insideBottomRight' }}
+          />
           {todayLabel && (
             <ReferenceLine
               x={todayLabel}
@@ -127,6 +178,7 @@ export default function TrajectoryChart({
           )}
         </AreaChart>
       </ResponsiveContainer>
+      </div>
       {targetDate && (
         <p className="mt-1 text-right text-[10px] text-ats-gray">
           Projection jusqu&apos;au{' '}

@@ -342,6 +342,7 @@ def summary(req: SummaryRequest,
         "today_session": today_session,
         "workout": workout_payload,
         "physio": physio,
+        "last_metric_date": max((m["recorded_date"] for m in metrics), default=None),
         "probability": {
             "value": prob.value,
             "adherence": prob.adherence,
