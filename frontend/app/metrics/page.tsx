@@ -86,6 +86,31 @@ export default async function MetricsPage({
           </p>
         )}
 
+        {garmin.last_sync && (
+          <div
+            className={`mt-4 rounded-xl border px-4 py-2.5 text-sm ${
+              garmin.last_sync.status === 'error'
+                ? 'border-ats-red/20 bg-ats-red/5 text-ats-red'
+                : garmin.last_sync.status === 'partial'
+                  ? 'border-ats-orange/20 bg-ats-orange/5 text-ats-orange'
+                  : 'border-ats-green/20 bg-ats-green/5 text-ats-green'
+            }`}
+          >
+            Dernière synchro :{' '}
+            {garmin.last_sync.status === 'success'
+              ? 'réussie'
+              : garmin.last_sync.status === 'partial'
+                ? 'partielle (certaines données manquent)'
+                : 'échec'}{' '}
+            · {new Date(garmin.last_sync.created_at).toLocaleString('fr-FR')}
+            {garmin.last_sync.error && (
+              <span className="mt-1 block text-[11px] opacity-80">
+                Détail : {garmin.last_sync.error}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* -------------------------------------------------- Garmin */}
         <section className="card mt-6 p-6">
           <div className="flex items-center gap-2 text-ats-muted">

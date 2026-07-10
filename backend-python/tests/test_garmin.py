@@ -68,6 +68,11 @@ def test_fetch_daily_maps_fields():
         "sleep_minutes": 450,
         "resting_heart_rate": 48,
         "stress_score": 32,
+        # Schéma stable (P2-9) : stades toujours présents (None si absents).
+        "sleep_deep_minutes": None,
+        "sleep_light_minutes": None,
+        "sleep_rem_minutes": None,
+        "sleep_awake_minutes": None,
     }
 
 

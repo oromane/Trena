@@ -5,9 +5,19 @@
  */
 const ENGINE_URL = process.env.PERFORMANCE_ENGINE_URL ?? 'http://performance-engine:8000';
 
+export interface SyncRun {
+  status: 'success' | 'partial' | 'error';
+  daily_days: number | null;
+  wellness_days: number | null;
+  activities_imported: number | null;
+  error: string | null;
+  created_at: string;
+}
+
 export interface GarminStatus {
   linked: boolean;
   updated_at?: string;
+  last_sync?: SyncRun | null;
 }
 
 export async function getGarminStatus(userId: string): Promise<GarminStatus> {

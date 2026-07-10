@@ -434,8 +434,12 @@ export async function syncGarmin() {
   let flag = 'sync_error';
   try {
     const r = await engineFetch('/garmin/sync', { user_id: user.id, days: 14 });
-    const acts = r.activities?.imported ?? 0;
-    flag = `synced_${r.days_with_data ?? 0}_${acts}`;
+    if (r.status === 'error') {
+      flag = 'sync_error';
+    } else {
+      const acts = r.activities?.imported ?? 0;
+      flag = `synced_${r.days_with_data ?? 0}_${acts}`;
+    }
   } catch (e) {
     console.error('garmin sync failed:', e);
   }

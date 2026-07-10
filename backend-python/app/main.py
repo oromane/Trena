@@ -1,7 +1,10 @@
 """Moteur de décision - API FastAPI (usage interne réseau Docker uniquement)."""
 from fastapi import FastAPI, HTTPException
 
+from .logging_setup import setup_logging
 from .engine import banister, hrv, planner, trimp
+
+setup_logging()
 from .routers import calendar as calendar_router
 from .routers import daily as daily_router
 from .routers import dashboard as dashboard_router

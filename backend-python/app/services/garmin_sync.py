@@ -143,7 +143,11 @@ class GarminClient:
         out: dict[str, Any] = {"recorded_date": iso, "hrv_ms": None,
                                "sleep_minutes": None,
                                "resting_heart_rate": None,
-                               "stress_score": None}
+                               "stress_score": None,
+                               "sleep_deep_minutes": None,
+                               "sleep_light_minutes": None,
+                               "sleep_rem_minutes": None,
+                               "sleep_awake_minutes": None}
 
         try:
             hrv = self._g.get_hrv_data(iso) or {}
@@ -215,7 +219,12 @@ class GarminClient:
     def fetch_wellness(self, day: date) -> dict:
         """Bien-être étendu du jour : pas, calories, poids, VO2max, Body Battery..."""
         iso = day.isoformat()
-        out: dict[str, Any] = {"recorded_date": iso}
+        out: dict[str, Any] = {
+            "recorded_date": iso, "steps": None, "calories_total": None,
+            "floors_climbed": None, "body_battery_high": None,
+            "body_battery_low": None, "intensity_minutes": None,
+            "weight_kg": None, "vo2max": None,
+        }
 
         try:
             s = self._g.get_user_summary(iso) or {}
@@ -288,6 +297,26 @@ def sync_user(repo, cipher, client: GarminClient, user_id: str,
             rows.append(row)
     if rows:
         repo.upsert_daily_metrics(user_id, rows)
+    return {"days_fetched": days, "days_with_data": len(rows)}
+
+
+def sync_wellness(repo, client: GarminClient, user_id: str,
+                  days: int = 7, until: date | None = None) -> dict:
+    """Récupère le bien-être étendu Garmin (pas, calories, poids, VO2max,
+    Body Battery, minutes intensives...) et upsert dans garmin_wellness.
+
+    Retourne {'days_fetched': n, 'days_with_data': m}.
+    """
+    until = until or date.today()
+    rows = []
+    for i in range(days):
+        d = until - timedelta(days=i)
+        row = client.fetch_wellness(d)
+        # Conserver le jour si au moins une métrique (hors la date) est présente.
+        if any(v is not None for k, v in row.items() if k != "recorded_date"):
+            rows.append(row)
+    if rows:
+        repo.upsert_wellness(user_id, rows)
     return {"days_fetched": days, "days_with_data": len(rows)}
 
 

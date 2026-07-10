@@ -5,10 +5,13 @@ dépendance au SDK Supabase.
 """
 from __future__ import annotations
 
+import logging
 from datetime import date, timedelta
 from typing import Any
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 
 class SupabaseRepo:
@@ -29,9 +32,23 @@ class SupabaseRepo:
             )
 
     # ------------------------------------------------------------------ utils
+    def _raise(self, r: httpx.Response, path: str) -> None:
+        """Lève une erreur INCLUANT le corps de la réponse PostgREST (le
+        message d'erreur Supabase, ex. PGRST102), et le loggue."""
+        if r.is_success:
+            return
+        body = r.text[:600]
+        logger.error("supabase_error", extra={"method": r.request.method,
+                                               "path": path, "status": r.status_code,
+                                               "body": body})
+        raise httpx.HTTPStatusError(
+            f"Supabase {r.status_code} {path}: {body}",
+            request=r.request, response=r,
+        )
+
     def _get(self, path: str, params: dict[str, Any]) -> list[dict]:
         r = self._client.get(path, params=params)
-        r.raise_for_status()
+        self._raise(r, path)
         return r.json()
 
     def _post(self, path: str, json: Any, headers: dict | None = None) -> list[dict]:
@@ -39,14 +56,14 @@ class SupabaseRepo:
         if headers:
             h.update(headers)
         r = self._client.post(path, json=json, headers=h)
-        r.raise_for_status()
+        self._raise(r, path)
         return r.json()
 
     def _patch(self, path: str, params: dict, json: dict) -> list[dict]:
         r = self._client.patch(
             path, params=params, json=json, headers={"Prefer": "return=representation"}
         )
-        r.raise_for_status()
+        self._raise(r, path)
         return r.json()
 
     # --------------------------------------------------------------- profiles
@@ -126,6 +143,21 @@ class SupabaseRepo:
             params={"id": f"eq.{template_id}", "user_id": f"eq.{user_id}"},
         )
         r.raise_for_status()
+
+    # ----------------------------------------------------------- sync_runs
+    def insert_sync_run(self, user_id: str, row: dict) -> None:
+        """Enregistre le résultat d'une synchro (best-effort, mais loggué)."""
+        try:
+            self._post("/sync_runs", [{**row, "user_id": user_id}])
+        except Exception:
+            logger.exception("sync_run insert failed")
+
+    def get_last_sync_run(self, user_id: str, provider: str = "garmin") -> dict | None:
+        rows = self._get("/sync_runs", {
+            "user_id": f"eq.{user_id}", "provider": f"eq.{provider}",
+            "select": "*", "order": "created_at.desc", "limit": "1",
+        })
+        return rows[0] if rows else None
 
     # ----------------------------------------------------------- daily_metrics
     def upsert_daily_metrics(self, user_id: str, metrics: list[dict]) -> list[dict]:
