@@ -405,6 +405,10 @@ class CompleteRequest(BaseModel):
     user_id: str
     session_id: str
     done: bool = True  # True = valider (faite), False = annuler la validation
+    # Réel saisi manuellement (optionnel) : sinon le prévu est repris.
+    actual_minutes: int | None = None
+    actual_distance_m: int | None = None
+    actual_avg_hr: int | None = None
 
 
 @router.post("/complete")
@@ -413,9 +417,10 @@ def complete(req: CompleteRequest,
     """Validation manuelle d'une séance : la passe en COMPLETED (→ historique
     + adhérence), sans supposer qu'elle est faite automatiquement.
 
-    Le réalisé est initialisé au prévu (durée + TRIMP) tant qu'aucune donnée
-    Garmin réelle n'existe. `done=False` annule la validation (retour PLANNED),
-    en préservant un éventuel réalisé importé depuis Garmin.
+    Si l'athlète saisit son réalisé (durée / distance / FC moyenne), le TRIMP
+    est recalculé depuis la FC (modèle TRIMP) ; sinon le prévu est repris.
+    `done=False` annule la validation (retour PLANNED), en préservant un
+    éventuel réalisé importé depuis Garmin.
     """
     session = repo.get_session(req.session_id, req.user_id)
     if session is None:
@@ -423,11 +428,33 @@ def complete(req: CompleteRequest,
 
     if req.done:
         fields: dict = {"status": "COMPLETED"}
-        # Ne pas écraser un réalisé déjà importé (Garmin).
-        if session.get("duration_actual_minutes") is None:
-            fields["duration_actual_minutes"] = session["duration_planned_minutes"]
-        if session.get("trimp_actual") is None:
-            fields["trimp_actual"] = session["intensity_target_trimp"]
+        # Durée réelle : saisie > réalisé existant > prévu.
+        dur = (req.actual_minutes or session.get("duration_actual_minutes")
+               or session["duration_planned_minutes"])
+        fields["duration_actual_minutes"] = dur
+        if req.actual_distance_m is not None:
+            fields["distance_m"] = req.actual_distance_m
+        if req.actual_avg_hr is not None:
+            fields["avg_hr"] = req.actual_avg_hr
+
+        # TRIMP réel : depuis la FC saisie si possible, sinon garder le réalisé
+        # existant (Garmin), sinon échelonner le prévu sur la durée réelle.
+        trimp_val = None
+        if req.actual_avg_hr is not None:
+            prof = repo.get_profile(req.user_id) or {}
+            hr_rest = prof.get("hr_rest") or 60
+            hr_max = prof.get("hr_max") or 190
+            if hr_max > hr_rest:
+                from ..engine.trimp import trimp as trimp_score
+                trimp_val = round(trimp_score(dur, req.actual_avg_hr,
+                                              hr_rest, hr_max, prof.get("sex") or "M"))
+        if trimp_val is None:
+            if session.get("trimp_actual") is not None and req.actual_minutes is None:
+                trimp_val = session["trimp_actual"]
+            else:
+                planned = session["duration_planned_minutes"] or dur
+                trimp_val = round(session["intensity_target_trimp"] * (dur / planned if planned else 1))
+        fields["trimp_actual"] = trimp_val
     else:
         fields = {"status": "PLANNED"}
         # Efface le réalisé seulement s'il a été saisi manuellement

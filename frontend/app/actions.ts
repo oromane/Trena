@@ -297,11 +297,20 @@ export async function deleteFromLibrary(formData: FormData) {
 /** Validation manuelle d'une séance : la marque comme faite (→ historique). */
 export async function completeSession(formData: FormData) {
   const { user } = await requireUser();
+  const numOrNull = (key: string) => {
+    const v = formData.get(key);
+    return v ? Number(v) : null;
+  };
   try {
     await engineFetch('/sessions/complete', {
       user_id: user.id,
       session_id: String(formData.get('session_id')),
       done: formData.get('done') !== 'false',
+      actual_minutes: numOrNull('actual_minutes'),
+      actual_distance_m: numOrNull('actual_distance_km') != null
+        ? Math.round(Number(formData.get('actual_distance_km')) * 1000)
+        : null,
+      actual_avg_hr: numOrNull('actual_avg_hr'),
     });
   } catch (e) {
     console.error('completeSession:', e);

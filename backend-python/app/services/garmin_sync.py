@@ -158,6 +158,16 @@ class GarminClient:
             secs = dto.get("sleepTimeSeconds")
             if secs:
                 out["sleep_minutes"] = round(secs / 60)
+            # Stades de sommeil détaillés (minutes)
+            for key, col in (
+                ("deepSleepSeconds", "sleep_deep_minutes"),
+                ("lightSleepSeconds", "sleep_light_minutes"),
+                ("remSleepSeconds", "sleep_rem_minutes"),
+                ("awakeSleepSeconds", "sleep_awake_minutes"),
+            ):
+                v = dto.get(key)
+                if v is not None:
+                    out[col] = round(v / 60)
             # HRV de secours si l'endpoint HRV n'a rien donné
             if out["hrv_ms"] is None and dto.get("avgOvernightHrv"):
                 out["hrv_ms"] = dto["avgOvernightHrv"]
@@ -183,6 +193,24 @@ class GarminClient:
             ) or []
         except Exception:
             return []
+
+    def fetch_activity_hr_zones(self, activity_id: str) -> list[int] | None:
+        """Temps par zone FC (secondes) pour une activité : [Z1, Z2, Z3, Z4, Z5].
+
+        Appel de détail par activité (plus lent) : à utiliser en repli quand le
+        résumé ne fournit pas le vecteur de zones. None si indisponible.
+        """
+        try:
+            data = self._g.get_activity_hr_in_timezones(activity_id) or []
+        except Exception:
+            return None
+        zones = [0, 0, 0, 0, 0]
+        for z in data:
+            n = z.get("zoneNumber")
+            secs = z.get("secsInZone")
+            if isinstance(n, int) and 1 <= n <= 5 and secs is not None:
+                zones[n - 1] = round(secs)
+        return zones if any(zones) else None
 
     def fetch_wellness(self, day: date) -> dict:
         """Bien-être étendu du jour : pas, calories, poids, VO2max, Body Battery..."""
@@ -360,6 +388,14 @@ def import_activities(repo, client: GarminClient, user_id: str,
         else:
             trimp_val = round(duration_min * 1.2)  # fallback sans FC
 
+        metrics = extract_activity_metrics(a)
+        # Repli : si le résumé n'a pas le vecteur de zones FC, on récupère le
+        # détail de l'activité (plus lent, un appel par sortie).
+        if "hr_time_in_zone_s" not in metrics:
+            zones = client.fetch_activity_hr_zones(activity_id)
+            if zones:
+                metrics["hr_time_in_zone_s"] = zones
+
         actuals = {
             "status": "COMPLETED",
             "duration_actual_minutes": duration_min,
@@ -367,7 +403,7 @@ def import_activities(repo, client: GarminClient, user_id: str,
             "distance_m": round(a["distance"]) if a.get("distance") else None,
             "avg_hr": round(avg_hr) if avg_hr else None,
             "garmin_activity_id": activity_id,
-            "activity_metrics": extract_activity_metrics(a) or None,
+            "activity_metrics": metrics or None,
         }
 
         planned = repo.get_session_for_date(user_id, date.fromisoformat(day_str))

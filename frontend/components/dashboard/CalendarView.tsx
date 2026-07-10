@@ -355,6 +355,9 @@ export default function CalendarView({
   const [sessions, setSessions] = useState<CalSession[]>([]);
   const [editing, setEditing] = useState<Editing>(null);
   const [editCustom, setEditCustom] = useState(false);
+  const [actMin, setActMin] = useState('');
+  const [actKm, setActKm] = useState('');
+  const [actHr, setActHr] = useState('');
   const [addMode, setAddMode] = useState<'simple' | 'template' | 'builder'>('simple');
   const [templateId, setTemplateId] = useState(templates[0]?.id ?? '');
   const [bTitle, setBTitle] = useState('Ma séance');
@@ -673,6 +676,17 @@ export default function CalendarView({
                       className="rounded-lg bg-ats-violet/10 px-3 py-2 text-xs font-semibold text-ats-violet hover:bg-ats-violet/20">
                 Personnaliser (constructeur)
               </button>
+              {editing.session.status !== 'COMPLETED' && (
+                <span className="inline-flex items-center gap-1.5 text-[10px] text-ats-gray">
+                  réel :
+                  <input type="number" min={1} max={360} placeholder="min" value={actMin}
+                         onChange={(e) => setActMin(e.target.value)} className={`${INPUT_CLS} w-14`} />
+                  <input type="number" min={0} step={0.1} placeholder="km" value={actKm}
+                         onChange={(e) => setActKm(e.target.value)} className={`${INPUT_CLS} w-14`} />
+                  <input type="number" min={60} max={230} placeholder="FC" value={actHr}
+                         onChange={(e) => setActHr(e.target.value)} className={`${INPUT_CLS} w-16`} />
+                </span>
+              )}
               <button
                 type="button"
                 disabled={pending}
@@ -680,6 +694,12 @@ export default function CalendarView({
                   const fd = new FormData();
                   fd.set('session_id', editing.session.id);
                   fd.set('done', editing.session.status === 'COMPLETED' ? 'false' : 'true');
+                  if (editing.session.status !== 'COMPLETED') {
+                    if (actMin) fd.set('actual_minutes', actMin);
+                    if (actKm) fd.set('actual_distance_km', actKm);
+                    if (actHr) fd.set('actual_avg_hr', actHr);
+                  }
+                  setActMin(''); setActKm(''); setActHr('');
                   submit(completeSession, fd);
                 }}
                 className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold disabled:opacity-50 ${

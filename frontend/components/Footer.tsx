@@ -43,7 +43,7 @@ export default function Footer() {
       </div>
       <div className="border-t border-white/5">
         <p className="mx-auto max-w-6xl px-6 py-4 text-[11px] text-ats-gray">
-          Trena · v0.4 · Tes données restent les tiennes : exportables et
+          Trena · v1.0 · Tes données restent les tiennes : exportables et
           supprimables depuis ton profil.
         </p>
       </div>
