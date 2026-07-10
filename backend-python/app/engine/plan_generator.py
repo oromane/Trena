@@ -61,6 +61,71 @@ def weekly_trimp_targets(
     return targets
 
 
+# Nombre de séances/semaine par défaut si l'athlète ne l'a pas fixé : laisse
+# au moins 2 jours de repos sur une semaine complète.
+DEFAULT_SESSIONS_PER_WEEK = 5
+
+
+def _pick_spread_days(days: list[tuple[int, int]], n: int) -> list[tuple[int, int]]:
+    """Choisit n jours RÉGULIÈREMENT répartis sur la semaine (repos intercalé).
+
+    Vise des positions idéales également espacées (ex. Lun/Mer/Ven/Dim pour 4)
+    puis les rabat sur le jour disponible le plus proche. Évite d'enchaîner
+    les séances. Retour trié par jour croissant.
+    """
+    avail = sorted(d[0] for d in days)
+    cap = dict(days)
+    if n >= len(avail):
+        return sorted(days, key=lambda d: d[0])
+
+    span = avail[-1] - avail[0]
+    if n > 1:
+        ideal = [avail[0] + round(k * span / (n - 1)) for k in range(n)]
+    else:
+        ideal = [avail[len(avail) // 2]]
+
+    chosen: list[int] = []
+    used: set[int] = set()
+    for p in ideal:
+        for d in sorted(avail, key=lambda x: (abs(x - p), x)):
+            if d not in used:
+                used.add(d)
+                chosen.append(d)
+                break
+    # Collisions éventuelles : compléter avec les jours restants.
+    for d in avail:
+        if len(chosen) >= n:
+            break
+        if d not in used:
+            used.add(d)
+            chosen.append(d)
+    return [(d, cap[d]) for d in sorted(chosen)]
+
+
+def _week_type_slots(n: int) -> list[tuple[str, float]]:
+    """Types de séance par créneau (jour croissant), séances dures séparées.
+
+    Le fractionné (INTERVAL) et le tempo (TEMPO) sont placés à des créneaux
+    éloignés, avec de l'endurance/récupération entre eux.
+    """
+    if n <= 1:
+        return [("ENDURANCE", 1.0)]
+    if n == 2:
+        return [("INTERVAL", 0.45), ("ENDURANCE", 0.55)]
+    has_rec = n >= 4
+    n_end = n - 2 - (1 if has_rec else 0)
+    end_share = (0.5 - (0.05 if has_rec else 0.0)) / max(n_end, 1)
+    slots: list[tuple[str, float] | None] = [None] * n
+    slots[0] = ("INTERVAL", 0.25)
+    slots[n // 2] = ("TEMPO", 0.25)
+    if has_rec:
+        slots[n - 1] = ("RECOVERY", 0.05)
+    for i in range(n):
+        if slots[i] is None:
+            slots[i] = ("ENDURANCE", end_share)
+    return slots  # type: ignore[return-value]
+
+
 def _distribute_week(
     week_start: date,
     weekly_trimp: float,
@@ -78,36 +143,20 @@ def _distribute_week(
     if not days:
         return []
 
-    # Limite du nombre de séances hebdomadaires : on garde les jours
-    # les plus disponibles.
-    if sessions_per_week is not None and len(days) > sessions_per_week:
-        days = sorted(days, key=lambda d: d[1], reverse=True)[:sessions_per_week]
-        days.sort(key=lambda d: d[0])
+    # Nombre de séances visé : choix de l'athlète, sinon défaut (laisse du repos).
+    target_count = (sessions_per_week if sessions_per_week is not None
+                    else DEFAULT_SESSIONS_PER_WEEK)
+    target_count = max(1, min(target_count, len(days)))
 
-    # Jours triés par disponibilité décroissante : les clés d'abord
-    by_capacity = sorted(days, key=lambda d: d[1], reverse=True)
-    n = len(by_capacity)
+    # Sélection des jours ESPACÉS (repos intercalé), triés par jour croissant.
+    days = _pick_spread_days(days, target_count)
+    n = len(days)
 
-    # Répartition des types : 1 INTERVAL, 1 TEMPO si >=3 jours, le reste ENDURANCE,
-    # dernier jour (le moins disponible) en RECOVERY si >=4 jours.
-    assignments: list[tuple[int, str, float]] = []  # (weekday, type, part de TRIMP)
-    if n == 1:
-        assignments = [(by_capacity[0][0], "ENDURANCE", 1.0)]
-    elif n == 2:
-        assignments = [
-            (by_capacity[0][0], "INTERVAL", 0.45),
-            (by_capacity[1][0], "ENDURANCE", 0.55),
-        ]
-    else:
-        parts: list[tuple[str, float]] = [("INTERVAL", 0.25), ("TEMPO", 0.25)]
-        n_endurance = n - 2 - (1 if n >= 4 else 0)
-        endurance_share = (0.5 - (0.05 if n >= 4 else 0.0)) / max(n_endurance, 1)
-        parts += [("ENDURANCE", endurance_share)] * n_endurance
-        if n >= 4:
-            parts.append(("RECOVERY", 0.05))
-        assignments = [
-            (by_capacity[i][0], t, share) for i, (t, share) in enumerate(parts)
-        ]
+    # Types par créneau, séances dures séparées.
+    assignments: list[tuple[int, str, float]] = [
+        (days[i][0], stype, share)
+        for i, (stype, share) in enumerate(_week_type_slots(n))
+    ]
 
     capacity = dict(days)
     plan: list[PlannedDay] = []
