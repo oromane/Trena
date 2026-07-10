@@ -1,5 +1,5 @@
 /**
- * Logo ATS — A: montagne, T: route (ligne verticale), S: trajectoire.
+ * Logo Trena — montagne (relief), route (ligne verticale), trajectoire (courbe).
  * Monochrome via currentColor ; l'accent (trajectoire) hérite ou se force.
  */
 export function LogoMark({ size = 28, accent = '#2E8B57' }: { size?: number; accent?: string }) {
@@ -10,7 +10,7 @@ export function LogoMark({ size = 28, accent = '#2E8B57' }: { size?: number; acc
       viewBox="0 0 32 32"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      aria-label="ATS"
+      aria-label="Trena"
     >
       {/* A — montagne */}
       <path
@@ -45,7 +45,7 @@ export default function Logo({ withText = true }: { withText?: boolean }) {
       <LogoMark />
       {withText && (
         <span className="text-sm font-bold tracking-[0.18em] text-ats-text">
-          ATS
+          TRENA
         </span>
       )}
     </span>

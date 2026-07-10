@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Github } from 'lucide-react';
 import Logo from '@/components/Logo';
 
 export default function Footer() {
@@ -42,10 +43,23 @@ export default function Footer() {
         </nav>
       </div>
       <div className="border-t border-white/5">
-        <p className="mx-auto max-w-6xl px-6 py-4 text-[11px] text-ats-gray">
-          Trena · v1.0 · Tes données restent les tiennes : exportables et
-          supprimables depuis ton profil.
-        </p>
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-6 py-4 text-[11px] text-ats-gray sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            Trena · v1.0 · Tes données restent les tiennes : exportables et
+            supprimables depuis ton profil.
+          </p>
+          <p className="flex items-center gap-1.5">
+            Créé par Romane ·
+            <a
+              href="https://github.com/oromane"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-ats-muted transition-colors hover:text-ats-text"
+            >
+              <Github className="h-3.5 w-3.5" /> github.com/oromane
+            </a>
+          </p>
+        </div>
       </div>
     </footer>
   );
