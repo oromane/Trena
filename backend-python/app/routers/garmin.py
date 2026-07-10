@@ -111,7 +111,13 @@ def link_mfa(req: MfaRequest,
 @router.get("/status")
 def status(user_id: str, repo: SupabaseRepo = Depends(get_repo)) -> dict:
     row = repo.get_oauth_token(user_id, garmin_sync.PROVIDER)
-    last_sync = repo.get_last_sync_run(user_id)
+    # Lecture optionnelle : ne doit jamais casser le statut « connecté »
+    # (ex. table sync_runs pas encore migrée).
+    try:
+        last_sync = repo.get_last_sync_run(user_id)
+    except Exception:
+        logger.exception("last_sync_fetch_failed", extra={"user_id": user_id})
+        last_sync = None
     if row is None:
         return {"linked": False, "last_sync": last_sync}
     return {"linked": True, "updated_at": row.get("updated_at"), "last_sync": last_sync}
