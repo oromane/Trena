@@ -237,3 +237,58 @@ def import_activities(req: ImportActivitiesRequest,
     return garmin_sync.import_activities(
         repo, client, req.user_id, days=req.days, until=req.until,
         hr_rest=hr_rest, hr_max=hr_max, sex=sex)
+
+
+# ---------------------------------------------------- Replan / fenêtre glissante
+def _metrics_snapshot(repo: SupabaseRepo, user_id: str) -> dict:
+    """ACWR courant depuis les charges TRIMP réalisées — best-effort.
+
+    Sert de `metrics_snapshot` de la révision (le « pourquoi » du replan). Ne
+    doit jamais faire échouer le replan : renvoie {} en cas de souci."""
+    try:
+        from ..engine.acwr import acwr_point
+        rows = repo.get_completed_loads(user_id, days=42)
+        by_day: dict = {}
+        for r in rows:
+            d = r.get("scheduled_date")
+            if not d:
+                continue
+            by_day[d] = by_day.get(d, 0.0) + (r.get("trimp_actual") or 0.0)
+        if not by_day:
+            return {}
+        start = date_type.fromisoformat(min(by_day))
+        end = date_type.fromisoformat(max(by_day))
+        series = [by_day.get((start + timedelta(days=i)).isoformat(), 0.0)
+                  for i in range((end - start).days + 1)]
+        pt = acwr_point(series)
+        return {"acwr": round(pt.ratio, 3), "acute": round(pt.acute, 1),
+                "chronic": round(pt.chronic, 1), "verdict": pt.verdict}
+    except Exception:
+        logger.exception("metrics_snapshot_failed", extra={"user_id": user_id})
+        return {}
+
+
+class ReplanRequest(BaseModel):
+    user_id: str
+    trigger: str = "WEEKLY"
+    window_days: int = 14
+
+
+@router.post("/replan")
+def replan(req: ReplanRequest, repo: SupabaseRepo = Depends(get_repo)) -> dict:
+    """Réconcilie la fenêtre glissante Garmin (idempotent).
+
+    Ouvre une révision de plan, retract les séances déjà matérialisées dans la
+    fenêtre, puis push les séances planifiées des `window_days` prochains jours.
+    Un seul writer vers Garmin. À déclencher par n8n (cron) ou l'app.
+    """
+    if not 1 <= req.window_days <= 21:
+        raise HTTPException(status_code=422, detail="window_days doit être entre 1 et 21")
+    cipher = _require_crypto()
+    client = _load_client(repo, cipher, req.user_id)  # fail-fast si non lié
+    snapshot = _metrics_snapshot(repo, req.user_id)
+    from ..services import plan_sync
+    return plan_sync.run_replan(
+        repo, client, req.user_id,
+        trigger=req.trigger, metrics_snapshot=snapshot,
+        window_days=req.window_days)

@@ -48,17 +48,32 @@ export default function Footer() {
             Trena · v1.0 · Tes données restent les tiennes : exportables et
             supprimables depuis ton profil.
           </p>
-          <p className="flex items-center gap-1.5">
-            Créé par Romane ·
+          <div className="flex flex-wrap items-center gap-4">
             <a
-              href="https://github.com/oromane"
+              href="https://www.buymeacoffee.com/oromane"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-ats-muted transition-colors hover:text-ats-text"
+              aria-label="Buy Me a Coffee"
             >
-              <Github className="h-3.5 w-3.5" /> github.com/oromane
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
+                alt="Buy Me a Coffee"
+                className="h-[40px] w-[145px]"
+              />
             </a>
-          </p>
+            <p className="flex items-center gap-1.5">
+              Créé par Romane ·
+              <a
+                href="https://github.com/oromane"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-ats-muted transition-colors hover:text-ats-text"
+              >
+                <Github className="h-3.5 w-3.5" /> github.com/oromane
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </footer>

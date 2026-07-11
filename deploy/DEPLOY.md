@@ -95,6 +95,34 @@ ajoute : `https://trena.nexolab.fr/api/google/callback`
 3. La timezone est déjà forcée à `Europe/Paris` dans le compose : le cron 06:00 est bien 6h heure française.
 4. Test manuel : exécute le workflow une fois et vérifie la réponse du moteur.
 
+## 6.1 Migrations SQL (à jouer sur Supabase)
+
+Les migrations `sql/migration-0XX.sql` s'exécutent dans le **SQL Editor Supabase**
+(base managée — pas sur le VPS), dans l'ordre. En particulier, avant d'utiliser
+la fenêtre glissante :
+
+- **`sql/migration-011.sql`** — crée `plan_revisions` + `session_garmin_link`
+  (plan versionné + mapping idempotent séance → workout Garmin). Idempotente
+  (`IF NOT EXISTS`). L'engine démarre sans, mais `POST /garmin/replan` échoue
+  tant qu'elle n'est pas jouée.
+
+## 6.2 n8n : replan (fenêtre glissante)
+
+La route `POST /garmin/replan` réconcilie la fenêtre glissante Garmin (retract
+puis re-push des 7-14 prochains jours ; idempotent). À déclencher par n8n comme
+le cron matinal.
+
+1. Nouveau workflow n8n : **Schedule Trigger** (ex. dimanche 18:00 — la timezone
+   `Europe/Paris` est déjà forcée dans le compose) + node **HTTP Request** :
+   - Method : `POST`
+   - URL : `http://performance-engine:8000/garmin/replan` *(réseau interne — pas
+     d'exposition publique)*
+   - Header : `X-Internal-Key` = `={{ $env.INTERNAL_API_KEY }}`
+   - Body (JSON) : `{ "user_id": "<uuid>", "trigger": "WEEKLY", "window_days": 14 }`
+2. **Active** le workflow.
+3. Test manuel : exécute une fois, la réponse doit contenir `revision`, `pushed`,
+   `retracted`. Prérequis : compte Garmin lié (`/garmin/link`) et migration-011 jouée.
+
 ## 7. Éteindre l'ancien hébergement PC
 
 - Ne lance plus `Trena-tunnel.bat` (l'ancien tunnel local est remplacé).
