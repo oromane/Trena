@@ -30,7 +30,7 @@
 - Un test d'intégration vérifie la cohérence objectifs (UI = moteur).
 **Dépendances.** P0-1 (observabilité) recommandé avant.
 
-### P0-3 · Synchro Garmin en job de fond — **L**
+### P0-3 · Synchro Garmin en job de fond — **L** — ✅ FAIT (Sprint 2)
 **Problème.** La synchro est **inline dans la requête HTTP** (jusqu'à 60 j × N appels Garmin + 1 appel de détail par activité) → risque de timeout et de rate-limit, sans retry ni idempotence (hors index unique).
 **Solution.** Déporter la synchro dans un worker/queue (n8n déclenche déjà le cron 6 h ; réutiliser ou ajouter une file). Le bouton « Synchroniser » enfile un job ; l'UI suit le statut (`sync_runs`).
 **Critères d'acceptation.**
@@ -60,7 +60,7 @@
 - Marquer une séance « faite » n'entraîne pas un re-fetch complet du summary.
 **Dépendances.** P1-4.
 
-### P1-6 · Batch / rate-limit Garmin + cache détail activité — **M**
+### P1-6 · Batch / rate-limit Garmin + cache détail activité — **M** — ✅ FAIT (Sprint 2)
 **Problème.** L'import fait un appel de **détail par activité** (zones FC) → N+1, lent, risque de rate-limit.
 **Solution.** Ne récupérer le détail que si absent du résumé, en **batch limité** avec backoff ; mémoriser les activités déjà détaillées (via `garmin_activity_id`) pour ne jamais refaire l'appel.
 **Critères d'acceptation.**

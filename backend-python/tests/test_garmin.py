@@ -197,10 +197,14 @@ def test_mfa_wrong_code_returns_502(client, repo):
 
 # --------------------------------------------------------- endpoints: sync
 def test_sync_endpoint_full_flow(client, repo):
+    # Synchro non-bloquante : l'endpoint répond aussitôt {status:'running'}
+    # et exécute le job en tâche de fond (TestClient les lance de façon
+    # synchrone avant de rendre la main → le mock repo est bien sollicité).
     cipher = TokenCipher(FERNET_KEY)
     repo.get_oauth_token.return_value = {
         "access_token_encrypted": cipher.encrypt("garth-token-blob"),
     }
+    repo.start_sync_run.return_value = "run-123"
     fake_client = GarminClient(_fake_garmin())
     with patch.object(GarminClient, "from_token", return_value=fake_client):
         r = client.post("/garmin/sync", headers=HEADERS,
@@ -208,11 +212,16 @@ def test_sync_endpoint_full_flow(client, repo):
                               "until": "2026-07-04"})
     assert r.status_code == 200
     body = r.json()
-    # Métriques quotidiennes + sections bien-être/activités (best effort)
-    assert body["days_fetched"] == 2
-    assert body["days_with_data"] == 2
-    assert "wellness" in body and "activities" in body
+    assert body["status"] == "running"
+    assert body["sync_run_id"] == "run-123"
+    # Le job de fond a bien tourné : run ouvert, données écrites, run clôturé.
+    repo.start_sync_run.assert_called_once_with("u1")
     repo.upsert_daily_metrics.assert_called_once()
+    repo.finish_sync_run.assert_called_once()
+    finish_args = repo.finish_sync_run.call_args
+    assert finish_args.args[0] == "run-123"
+    assert finish_args.args[1]["status"] in {"success", "partial"}
+    assert finish_args.args[1]["daily_days"] == 2
 
 
 def test_sync_404_when_not_linked(client, repo):

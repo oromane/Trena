@@ -113,6 +113,68 @@ def test_import_fallback_trimp_without_hr():
     assert row["trimp_actual"] == 72  # 60 min * 1.2
 
 
+# ----------------------------------------- P1-6 : rate-limit / cache détail
+class _FakeTooManyRequests(Exception):
+    """Simule garminconnect.GarminConnectTooManyRequestsError (429)."""
+
+
+_ZONE_DETAIL = [
+    {"zoneNumber": 2, "secsInZone": 1800},
+    {"zoneNumber": 3, "secsInZone": 1200},
+]
+
+
+def test_hr_zone_detail_backs_off_on_rate_limit(monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda *a, **k: None)
+    g = MagicMock()
+    # 429 deux fois puis succès → doit réessayer sans lever.
+    g.get_activity_hr_in_timezones.side_effect = [
+        _FakeTooManyRequests("429 Too Many Requests"),
+        _FakeTooManyRequests("429 Too Many Requests"),
+        _ZONE_DETAIL,
+    ]
+    zones = GarminClient(g).fetch_activity_hr_zones("123", max_retries=3)
+    assert zones == [0, 1800, 1200, 0, 0]
+    assert g.get_activity_hr_in_timezones.call_count == 3
+
+
+def test_hr_zone_detail_gives_up_after_retries(monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda *a, **k: None)
+    g = MagicMock()
+    g.get_activity_hr_in_timezones.side_effect = _FakeTooManyRequests("429")
+    assert GarminClient(g).fetch_activity_hr_zones("123", max_retries=3) is None
+    assert g.get_activity_hr_in_timezones.call_count == 3
+
+
+def test_import_caps_detail_calls_per_sync(monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda *a, **k: None)
+    g = MagicMock()
+    # 40 activités neuves sans zones dans le résumé → chacune tenterait un détail.
+    g.get_activities_by_date.return_value = [
+        _activity(aid=str(i), day="2026-07-05") for i in range(40)
+    ]
+    g.get_activity_hr_in_timezones.return_value = _ZONE_DETAIL
+    repo = MagicMock()
+    repo.get_session_by_activity.return_value = None
+    repo.get_session_for_date.return_value = None
+    result = import_activities(repo, GarminClient(g), "u1", days=7,
+                               until=date(2026, 7, 6))
+    assert result["detail_calls"] == 30  # plafond MAX_DETAIL_CALLS
+    assert g.get_activity_hr_in_timezones.call_count == 30
+
+
+def test_resync_of_known_activities_makes_no_detail_call():
+    g = MagicMock()
+    g.get_activities_by_date.return_value = [_activity(aid="dup")]
+    repo = MagicMock()
+    repo.get_session_by_activity.return_value = {"id": "s-old"}  # déjà importée
+    result = import_activities(repo, GarminClient(g), "u1", days=7,
+                               until=date(2026, 7, 6))
+    assert result["already_imported"] == 1
+    assert result["detail_calls"] == 0
+    g.get_activity_hr_in_timezones.assert_not_called()
+
+
 # --------------------------------------------------------------- bien-être
 def test_sync_wellness_upserts():
     g = MagicMock()

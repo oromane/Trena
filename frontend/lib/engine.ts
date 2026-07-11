@@ -6,7 +6,7 @@
 const ENGINE_URL = process.env.PERFORMANCE_ENGINE_URL ?? 'http://performance-engine:8000';
 
 export interface SyncRun {
-  status: 'success' | 'partial' | 'error';
+  status: 'running' | 'success' | 'partial' | 'error';
   daily_days: number | null;
   wellness_days: number | null;
   activities_imported: number | null;

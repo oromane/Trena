@@ -3,7 +3,7 @@ import logging
 from datetime import date as date_type
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -152,62 +152,71 @@ def _hr_params(repo: SupabaseRepo, user_id: str) -> tuple[float, float, str]:
         (profile.get("sex") or "M")
 
 
-@router.post("/sync")
-def sync(req: SyncRequest, repo: SupabaseRepo = Depends(get_repo)) -> dict:
-    """Récupère métriques quotidiennes + bien-être étendu + activités.
-    Re-persiste le jeton garth (rafraîchi automatiquement par la lib)."""
-    if not 1 <= req.days <= 60:
-        raise HTTPException(status_code=422, detail="days doit être entre 1 et 60")
-    cipher = _require_crypto()
-    client = _load_client(repo, cipher, req.user_id)
+def _run_sync_job(repo: SupabaseRepo, user_id: str, days: int, until,
+                  run_id: str | None, cipher, client) -> None:
+    """Tâche de fond : exécute la synchro et clôture le sync_run.
 
+    Ne bloque pas la requête HTTP. Le repo est le singleton applicatif
+    (client httpx persistant, sûr entre threads). Erreurs logguées.
+    """
     result: dict = {}
     errors: list[str] = []
 
     try:
-        result = garmin_sync.sync_user(repo, cipher, client, req.user_id,
-                                       days=req.days, until=req.until)
+        result = garmin_sync.sync_user(repo, cipher, client, user_id,
+                                       days=days, until=until)
     except Exception as e:
-        logger.exception("garmin_daily_sync_failed", extra={"user_id": req.user_id})
+        logger.exception("garmin_daily_sync_failed", extra={"user_id": user_id})
         errors.append(f"daily: {e}")
 
     try:
         result["wellness"] = garmin_sync.sync_wellness(
-            repo, client, req.user_id, days=req.days, until=req.until)
+            repo, client, user_id, days=days, until=until)
     except Exception as e:
-        logger.exception("garmin_wellness_sync_failed", extra={"user_id": req.user_id})
+        logger.exception("garmin_wellness_sync_failed", extra={"user_id": user_id})
         result["wellness"] = None
         errors.append(f"wellness: {e}")
 
     try:
-        hr_rest, hr_max, sex = _hr_params(repo, req.user_id)
+        hr_rest, hr_max, sex = _hr_params(repo, user_id)
         result["activities"] = garmin_sync.import_activities(
-            repo, client, req.user_id, days=req.days, until=req.until,
+            repo, client, user_id, days=days, until=until,
             hr_rest=hr_rest, hr_max=hr_max, sex=sex)
     except Exception as e:
-        logger.exception("garmin_activities_import_failed", extra={"user_id": req.user_id})
+        logger.exception("garmin_activities_import_failed", extra={"user_id": user_id})
         result["activities"] = None
         errors.append(f"activities: {e}")
 
     try:
-        _store_token(repo, cipher, client, req.user_id)
+        _store_token(repo, cipher, client, user_id)
     except Exception:
-        logger.exception("garmin_token_store_failed", extra={"user_id": req.user_id})
+        logger.exception("garmin_token_store_failed", extra={"user_id": user_id})
 
-    # Statut global : succès si rien n'a échoué ; erreur si même le quotidien a
-    # échoué ; partiel sinon. Enregistré pour l'observabilité + l'UI.
     daily_ok = "days_with_data" in result
     status = "success" if not errors else ("error" if not daily_ok else "partial")
-    repo.insert_sync_run(req.user_id, {
+    repo.finish_sync_run(run_id, {
         "status": status,
         "daily_days": result.get("days_with_data"),
         "wellness_days": (result.get("wellness") or {}).get("days_with_data"),
         "activities_imported": (result.get("activities") or {}).get("imported"),
         "error": (" | ".join(errors)[:1000]) or None,
     })
-    result["status"] = status
-    result["errors"] = errors
-    return result
+
+
+@router.post("/sync")
+def sync(req: SyncRequest, background_tasks: BackgroundTasks,
+         repo: SupabaseRepo = Depends(get_repo)) -> dict:
+    """Lance la synchro en TÂCHE DE FOND (non-bloquant) et retourne aussitôt.
+    Le statut est suivi via /garmin/status (dernier sync_run : running →
+    success/partial/error)."""
+    if not 1 <= req.days <= 60:
+        raise HTTPException(status_code=422, detail="days doit être entre 1 et 60")
+    cipher = _require_crypto()
+    client = _load_client(repo, cipher, req.user_id)  # fail-fast si non lié
+    run_id = repo.start_sync_run(req.user_id)
+    background_tasks.add_task(_run_sync_job, repo, req.user_id, req.days,
+                             req.until, run_id, cipher, client)
+    return {"status": "running", "sync_run_id": run_id}
 
 
 class ImportActivitiesRequest(BaseModel):

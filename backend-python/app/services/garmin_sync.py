@@ -36,6 +36,14 @@ class GarminMfaRequired(Exception):
     """Signal interne : le login a déclenché un prompt MFA."""
 
 
+def _is_rate_limit(exc: Exception) -> bool:
+    """True si l'exception ressemble à un 429 Garmin (sans coupler la lib)."""
+    name = type(exc).__name__.lower()
+    text = str(exc).lower()
+    return ("toomanyrequests" in name or "429" in text
+            or "too many requests" in text or "rate limit" in text)
+
+
 # ---------------------------------------------------------------- MFA state
 @dataclass
 class PendingMfaSession:
@@ -67,8 +75,13 @@ def get_pending_session(session_id: str) -> PendingMfaSession | None:
 class GarminClient:
     """Adaptateur mince autour de garminconnect.Garmin."""
 
+    # Débit des appels de DÉTAIL par activité (zones FC). Garmin rate-limite
+    # agressivement : throttle doux + backoff exponentiel sur 429.
+    _MIN_DETAIL_INTERVAL_S = 0.4  # ~2,5 req/s max
+
     def __init__(self, garmin: Any = None):
         self._g = garmin
+        self._last_detail_ts = 0.0
 
     # ------------------------------------------------------------------ auth
     @classmethod
@@ -200,16 +213,36 @@ class GarminClient:
         except Exception:
             return []
 
-    def fetch_activity_hr_zones(self, activity_id: str) -> list[int] | None:
+    def fetch_activity_hr_zones(self, activity_id: str,
+                                max_retries: int = 3) -> list[int] | None:
         """Temps par zone FC (secondes) pour une activité : [Z1, Z2, Z3, Z4, Z5].
 
         Appel de détail par activité (plus lent) : à utiliser en repli quand le
         résumé ne fournit pas le vecteur de zones. None si indisponible.
+
+        Throttle doux entre appels + backoff exponentiel sur rate-limit (429)
+        pour ne jamais saturer l'API Garmin lors d'un import volumineux.
         """
-        try:
-            data = self._g.get_activity_hr_in_timezones(activity_id) or []
-        except Exception:
-            return None
+        # Throttle : espace les appels de détail successifs.
+        wait = self._MIN_DETAIL_INTERVAL_S - (time.monotonic() - self._last_detail_ts)
+        if wait > 0:
+            time.sleep(wait)
+
+        data = None
+        delay = 1.0
+        for attempt in range(max_retries):
+            try:
+                data = self._g.get_activity_hr_in_timezones(activity_id) or []
+                break
+            except Exception as exc:
+                if _is_rate_limit(exc) and attempt < max_retries - 1:
+                    time.sleep(delay)
+                    delay *= 2
+                    continue
+                self._last_detail_ts = time.monotonic()
+                return None
+        self._last_detail_ts = time.monotonic()
+
         zones = [0, 0, 0, 0, 0]
         for z in data:
             n = z.get("zoneNumber")
@@ -396,6 +429,12 @@ def import_activities(repo, client: GarminClient, user_id: str,
     start = until - timedelta(days=days - 1)
     activities = client.fetch_activities(start, until)
 
+    # Plafond d'appels de DÉTAIL par synchro : borne le N+1 même sur une
+    # fenêtre chargée. Les activités déjà importées sont ignorées avant tout
+    # appel réseau → une resynchro d'une fenêtre stable ne coûte aucun détail.
+    MAX_DETAIL_CALLS = 30
+    detail_calls = 0
+
     imported = matched = created = skipped = 0
     for a in activities:
         type_key = ((a.get("activityType") or {}).get("typeKey") or "").lower()
@@ -424,7 +463,8 @@ def import_activities(repo, client: GarminClient, user_id: str,
         metrics = extract_activity_metrics(a)
         # Repli : si le résumé n'a pas le vecteur de zones FC, on récupère le
         # détail de l'activité (plus lent, un appel par sortie).
-        if "hr_time_in_zone_s" not in metrics:
+        if "hr_time_in_zone_s" not in metrics and detail_calls < MAX_DETAIL_CALLS:
+            detail_calls += 1
             zones = client.fetch_activity_hr_zones(activity_id)
             if zones:
                 metrics["hr_time_in_zone_s"] = zones
@@ -458,7 +498,7 @@ def import_activities(repo, client: GarminClient, user_id: str,
 
     return {"activities_found": len(activities), "imported": imported,
             "matched": matched, "created": created,
-            "already_imported": skipped}
+            "already_imported": skipped, "detail_calls": detail_calls}
 
 
 # ------------------------------------------------------------- bien-être

@@ -159,6 +159,26 @@ class SupabaseRepo:
         })
         return rows[0] if rows else None
 
+    def start_sync_run(self, user_id: str, provider: str = "garmin") -> str | None:
+        """Ouvre un run en statut 'running' et retourne son id (best-effort)."""
+        try:
+            rows = self._post("/sync_runs", [{
+                "user_id": user_id, "provider": provider, "status": "running",
+            }])
+            return rows[0]["id"] if rows else None
+        except Exception:
+            logger.exception("start_sync_run failed")
+            return None
+
+    def finish_sync_run(self, sync_run_id: str | None, fields: dict) -> None:
+        """Clôture un run (statut + volumes + erreurs). Best-effort, loggué."""
+        if not sync_run_id:
+            return
+        try:
+            self._patch("/sync_runs", {"id": f"eq.{sync_run_id}"}, fields)
+        except Exception:
+            logger.exception("finish_sync_run failed")
+
     # ----------------------------------------------------------- daily_metrics
     def upsert_daily_metrics(self, user_id: str, metrics: list[dict]) -> list[dict]:
         if not metrics:

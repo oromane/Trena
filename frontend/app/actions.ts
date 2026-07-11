@@ -431,20 +431,17 @@ export async function unlinkGarmin() {
 /** Synchronise les 14 derniers jours depuis Garmin Connect (métriques + bien-être + activités). */
 export async function syncGarmin() {
   const { user } = await requireUser();
-  let flag = 'sync_error';
+  // Synchro non-bloquante : l'endpoint enfile un job de fond et répond
+  // aussitôt ({status:'running'}). L'avancement est suivi côté page via le
+  // dernier sync_run (running → success/partial/error), rafraîchi par polling.
+  let flag = 'syncing';
   try {
-    const r = await engineFetch('/garmin/sync', { user_id: user.id, days: 14 });
-    if (r.status === 'error') {
-      flag = 'sync_error';
-    } else {
-      const acts = r.activities?.imported ?? 0;
-      flag = `synced_${r.days_with_data ?? 0}_${acts}`;
-    }
+    await engineFetch('/garmin/sync', { user_id: user.id, days: 14 });
   } catch (e) {
     console.error('garmin sync failed:', e);
+    flag = 'sync_error';
   }
   revalidatePath('/metrics');
-  revalidatePath('/dashboard');
   redirect(`/metrics?garmin=${flag}`);
 }
 

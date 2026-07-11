@@ -4,6 +4,7 @@ import Footer from '@/components/Footer';
 import GarminLink from '@/components/GarminLink';
 import TrendsChart from '@/components/TrendsChart';
 import SubmitButton from '@/components/SubmitButton';
+import SyncStatusPoller from '@/components/SyncStatusPoller';
 import {
   importGarminActivities,
   saveDailyMetrics,
@@ -21,6 +22,7 @@ const GARMIN_MESSAGES: Record<string, { text: string; ok: boolean }> = {
     ok: false,
   },
   sync_error: { text: 'Échec de synchronisation : réessaie dans une minute.', ok: false },
+  syncing: { text: 'Synchronisation lancée — récupération des données en cours…', ok: true },
 };
 
 function garminMessage(flag?: string) {
@@ -86,27 +88,40 @@ export default async function MetricsPage({
           </p>
         )}
 
+        <SyncStatusPoller status={garmin.last_sync?.status} />
+
         {garmin.last_sync && (
           <div
             className={`mt-4 rounded-xl border px-4 py-2.5 text-sm ${
-              garmin.last_sync.status === 'error'
-                ? 'border-ats-red/20 bg-ats-red/5 text-ats-red'
-                : garmin.last_sync.status === 'partial'
-                  ? 'border-ats-orange/20 bg-ats-orange/5 text-ats-orange'
-                  : 'border-ats-green/20 bg-ats-green/5 text-ats-green'
+              garmin.last_sync.status === 'running'
+                ? 'border-ats-green/20 bg-ats-green/5 text-ats-muted'
+                : garmin.last_sync.status === 'error'
+                  ? 'border-ats-red/20 bg-ats-red/5 text-ats-red'
+                  : garmin.last_sync.status === 'partial'
+                    ? 'border-ats-orange/20 bg-ats-orange/5 text-ats-orange'
+                    : 'border-ats-green/20 bg-ats-green/5 text-ats-green'
             }`}
           >
-            Dernière synchro :{' '}
-            {garmin.last_sync.status === 'success'
-              ? 'réussie'
-              : garmin.last_sync.status === 'partial'
-                ? 'partielle (certaines données manquent)'
-                : 'échec'}{' '}
-            · {new Date(garmin.last_sync.created_at).toLocaleString('fr-FR')}
-            {garmin.last_sync.error && (
-              <span className="mt-1 block text-[11px] opacity-80">
-                Détail : {garmin.last_sync.error}
+            {garmin.last_sync.status === 'running' ? (
+              <span className="inline-flex items-center gap-2">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                Synchronisation en cours… (mise à jour automatique)
               </span>
+            ) : (
+              <>
+                Dernière synchro :{' '}
+                {garmin.last_sync.status === 'success'
+                  ? 'réussie'
+                  : garmin.last_sync.status === 'partial'
+                    ? 'partielle (certaines données manquent)'
+                    : 'échec'}{' '}
+                · {new Date(garmin.last_sync.created_at).toLocaleString('fr-FR')}
+                {garmin.last_sync.error && (
+                  <span className="mt-1 block text-[11px] opacity-80">
+                    Détail : {garmin.last_sync.error}
+                  </span>
+                )}
+              </>
             )}
           </div>
         )}
