@@ -294,6 +294,41 @@ class GarminClient:
 
         return out
 
+    # ------------------------------------------------------- push de séances
+    # Le calendrier Garmin est écrit UNIQUEMENT ici (un seul writer). Les quatre
+    # verbes create/schedule/unschedule/delete sont le cœur du replan : la
+    # fenêtre glissante retract + delete puis re-push, sans polluer la montre.
+    _WORKOUT_SVC = "/workout-service/workout"
+    _SCHEDULE_SVC = "/workout-service/schedule"
+
+    def _connectapi(self, path: str, method: str = "GET", **kwargs):
+        """Appel bas niveau via garth (transport authentifié de garminconnect)."""
+        return self._g.garth.connectapi(path, method=method, **kwargs)
+
+    def create_workout(self, payload: dict) -> int:
+        """POST d'une séance structurée. Retourne le workoutId Garmin."""
+        resp = self._connectapi(self._WORKOUT_SVC, method="POST", json=payload) or {}
+        wid = resp.get("workoutId")
+        if wid is None:
+            raise GarminAuthError(f"Garmin n'a pas renvoyé de workoutId : {str(resp)[:200]}")
+        return int(wid)
+
+    def delete_workout(self, workout_id: int) -> None:
+        self._connectapi(f"{self._WORKOUT_SVC}/{workout_id}", method="DELETE")
+
+    def schedule_workout(self, workout_id: int, day: date) -> int:
+        """Place une séance au calendrier. Retourne le workoutScheduleId."""
+        resp = self._connectapi(f"{self._SCHEDULE_SVC}/{workout_id}",
+                                method="POST", json={"date": day.isoformat()}) or {}
+        sid = resp.get("workoutScheduleId")
+        if sid is None:
+            raise GarminAuthError(f"Garmin n'a pas renvoyé de scheduleId : {str(resp)[:200]}")
+        return int(sid)
+
+    def unschedule_workout(self, schedule_id: int) -> None:
+        """Retire du calendrier SANS supprimer la définition de séance."""
+        self._connectapi(f"{self._SCHEDULE_SVC}/{schedule_id}", method="DELETE")
+
 
 def complete_mfa(session_id: str, mfa_code: str) -> GarminClient:
     """Étape 2 : soumet le code MFA via resume_login().
@@ -376,6 +411,8 @@ def extract_activity_metrics(a: dict) -> dict:
     Toutes les valeurs absentes sont écartées. Le vecteur de temps par zone
     de FC (hrTimeInZone_1..5) est la base d'un futur TRIMP zonal.
     """
+    from ..engine.gap import gap_from_summary
+
     def num(v, nd: int | None = None):
         if not isinstance(v, (int, float)):
             return None
@@ -410,6 +447,13 @@ def extract_activity_metrics(a: dict) -> dict:
         # Évolution
         "vo2max": num(a.get("vO2MaxValue"), 1),
     }
+    # Allure ajustée à la pente (Minetti) — estimée depuis le résumé.
+    metrics["gap_pace_s_per_km"] = gap_from_summary(
+        metrics.get("avg_pace_s_per_km"),
+        metrics.get("distance_m"),
+        metrics.get("elevation_gain_m"),
+        metrics.get("elevation_loss_m"),
+    )
     return {k: v for k, v in metrics.items() if v is not None}
 
 

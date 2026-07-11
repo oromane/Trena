@@ -349,6 +349,64 @@ class SupabaseRepo:
         )
         r.raise_for_status()
 
+    # ------------------------------------------------------- plan_revisions
+    def next_revision_number(self, user_id: str) -> int:
+        rows = self._get("/plan_revisions", {
+            "user_id": f"eq.{user_id}", "select": "revision",
+            "order": "revision.desc", "limit": "1",
+        })
+        return (rows[0]["revision"] + 1) if rows else 1
+
+    def insert_plan_revision(self, user_id: str, revision: int, trigger: str,
+                             rationale: str | None, metrics_snapshot: dict | None) -> dict | None:
+        rows = self._post("/plan_revisions", [{
+            "user_id": user_id, "revision": revision, "trigger": trigger,
+            "rationale": rationale, "metrics_snapshot": metrics_snapshot,
+        }])
+        return rows[0] if rows else None
+
+    def list_plan_revisions(self, user_id: str, limit: int = 20) -> list[dict]:
+        return self._get("/plan_revisions", {
+            "user_id": f"eq.{user_id}", "select": "*",
+            "order": "revision.desc", "limit": str(limit),
+        })
+
+    # --------------------------------------------------- session_garmin_link
+    def upsert_session_link(self, user_id: str, session_id: str,
+                            garmin_workout_id: int, garmin_scheduled_id: int | None,
+                            plan_revision: int) -> dict | None:
+        rows = self._post(
+            "/session_garmin_link?on_conflict=session_id",
+            [{
+                "session_id": session_id, "user_id": user_id,
+                "garmin_workout_id": garmin_workout_id,
+                "garmin_scheduled_id": garmin_scheduled_id,
+                "plan_revision": plan_revision,
+            }],
+            headers={"Prefer": "return=representation,resolution=merge-duplicates"},
+        )
+        return rows[0] if rows else None
+
+    def get_links_in_window(self, user_id: str, start: date, end: date) -> list[dict]:
+        """Liens Garmin dont la séance tombe dans [start, end] — via embed PostgREST.
+
+        Requiert une clé étrangère session_garmin_link.session_id ->
+        training_sessions.id (posée par migration-011).
+        """
+        rows = self._get("/session_garmin_link", {
+            "user_id": f"eq.{user_id}",
+            "select": "*,training_sessions!inner(scheduled_date)",
+            "training_sessions.scheduled_date": f"gte.{start.isoformat()}",
+            "and": f"(training_sessions.scheduled_date.lte.{end.isoformat()})",
+        })
+        return rows
+
+    def delete_session_link(self, session_id: str) -> None:
+        r = self._client.delete(
+            "/session_garmin_link", params={"session_id": f"eq.{session_id}"},
+        )
+        r.raise_for_status()
+
 
 # Singleton paresseux, remplaçable dans les tests via dependency_overrides
 _repo: SupabaseRepo | None = None
