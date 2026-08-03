@@ -1,5 +1,9 @@
 """Moteur de décision - API FastAPI (usage interne réseau Docker uniquement)."""
 from fastapi import FastAPI, HTTPException
+from dotenv import load_dotenv
+
+# Charger les variables d'environnement
+load_dotenv()
 
 from .logging_setup import setup_logging
 from .engine import banister, hrv, planner, trimp
@@ -12,6 +16,7 @@ from .routers import garmin as garmin_router
 from .routers import ingest as ingest_router
 from .routers import plan as plan_router
 from .routers import sessions as sessions_router
+from .routers import strength as strength_router
 from .models import (
     DailyAdjustRequest,
     DailyAdjustResponse,
@@ -34,6 +39,7 @@ app.include_router(calendar_router.router)
 app.include_router(dashboard_router.router)
 app.include_router(garmin_router.router)
 app.include_router(sessions_router.router)
+app.include_router(strength_router.router)
 
 
 @app.get("/health")
