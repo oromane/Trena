@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { SubmitButton } from '@/components/SubmitButton'
 
 interface RIRLoggerProps {
   sessionId: string
@@ -105,9 +104,13 @@ export default function RIRLogger({
         </p>
       </div>
 
-      <SubmitButton disabled={loading} className="w-full">
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition"
+      >
         {loading ? 'Enregistrement...' : 'Enregistrer la série'}
-      </SubmitButton>
+      </button>
     </form>
   )
 }

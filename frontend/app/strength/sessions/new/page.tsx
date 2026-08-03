@@ -2,7 +2,7 @@
 
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowser } from '@/lib/supabase/client'
 import SessionCreator from '@/components/strength/SessionCreator'
 
 export default function NewSessionPage() {
@@ -14,7 +14,7 @@ export default function NewSessionPage() {
 
   useEffect(() => {
     const getUser = async () => {
-      const supabase = createClient()
+      const supabase = createSupabaseBrowser()
       const {
         data: { user },
       } = await supabase.auth.getUser()

@@ -1,22 +1,35 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createSupabaseBrowser } from '@/lib/supabase/client'
 import ExerciseList from '@/components/strength/ExerciseList'
 
-export const metadata = {
-  title: 'Exercices - Module Strength',
-  description: 'Sélectionnez un exercice pour créer une séance',
-}
+export default function ExercisesPage() {
+  const router = useRouter()
+  const [user, setUser] = useState<{ id: string } | null>(null)
+  const [loading, setLoading] = useState(true)
 
-export default async function ExercisesPage() {
-  const supabase = createClient()
+  useEffect(() => {
+    const getUser = async () => {
+      const supabase = createSupabaseBrowser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+      if (!user) {
+        router.push('/login')
+      } else {
+        setUser(user)
+      }
+      setLoading(false)
+    }
 
-  if (!user) {
-    redirect('/login')
-  }
+    getUser()
+  }, [router])
+
+  if (loading) return <div className="text-center py-8">Chargement...</div>
+  if (!user) return null
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-8 space-y-8">

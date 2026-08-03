@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { SubmitButton } from '@/components/SubmitButton'
 
 interface SessionCreatorProps {
   userId: string
@@ -152,9 +151,13 @@ export default function SessionCreator({ userId, exerciseId, onSuccess }: Sessio
 
       {error && <div className="p-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-lg">{error}</div>}
 
-      <SubmitButton disabled={loading} className="w-full">
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition"
+      >
         {loading ? 'Création...' : 'Créer la séance'}
-      </SubmitButton>
+      </button>
     </form>
   )
 }

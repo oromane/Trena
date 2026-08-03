@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowser } from '@/lib/supabase/client'
 import RIRLogger from '@/components/strength/RIRLogger'
 
 interface Prescription {
@@ -32,7 +32,7 @@ export default function SessionPage() {
 
   useEffect(() => {
     const getUser = async () => {
-      const supabase = createClient()
+      const supabase = createSupabaseBrowser()
       const {
         data: { user },
       } = await supabase.auth.getUser()
