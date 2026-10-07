@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const BACKEND_URL = process.env.PERFORMANCE_ENGINE_URL || 'http://localhost:8000'
+const INTERNAL_KEY = process.env.INTERNAL_API_KEY ?? ''
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,10 +17,11 @@ export async function GET(request: NextRequest) {
 
     const response = await fetch(url, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Internal-Key': INTERNAL_KEY },
+      cache: 'no-store',
     })
 
-    if (!response.ok) throw new Error(`Backend error: ${response.statusText}`)
+    if (!response.ok) throw new Error(`Backend error: ${response.status} ${response.statusText}`)
 
     const data = await response.json()
     return NextResponse.json(data)

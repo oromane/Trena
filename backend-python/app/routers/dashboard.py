@@ -186,6 +186,87 @@ def _race_week_block(obj_block: dict | None, paces_payload: dict | None) -> dict
         },
     }
 
+def _empty_totals() -> dict:
+    return {"sessions": 0, "minutes": 0, "distance_m": 0, "trimp": 0,
+            "tonnage_kg": 0.0}
+
+
+def _tonnage_kg(s: dict) -> float:
+    """Tonnage d'une séance, si la synchro l'a fourni dans activity_metrics.
+
+    Aucune colonne dédiée n'existe : on lit le blob JSONB de façon défensive
+    et on retombe sur 0 plutôt que de faire échouer l'accueil.
+    """
+    metrics = s.get("activity_metrics")
+    if not isinstance(metrics, dict):
+        return 0.0
+    for key in ("tonnage_kg", "total_volume_kg", "volume_kg"):
+        try:
+            value = float(metrics.get(key))
+        except (TypeError, ValueError):
+            continue
+        if value > 0:
+            return value
+    return 0.0
+
+
+def _accumulate(bucket: dict, s: dict) -> None:
+    bucket["sessions"] += 1
+    bucket["minutes"] += s.get("duration_actual_minutes") or 0
+    bucket["distance_m"] += s.get("distance_m") or 0
+    bucket["trimp"] += s.get("trimp_actual") or 0
+    bucket["tonnage_kg"] += _tonnage_kg(s)
+
+
+def _discipline_meta(discipline: str | None) -> dict:
+    """Libellé, icône et couleur d'une discipline (inconnue : renvoyée brute)."""
+    key = (discipline or "OTHER").upper()
+    meta = DISCIPLINES.get(key)
+    if meta is None:
+        meta = {"label": key.capitalize(), "icon": "other", "accent": "gray"}
+    return {"discipline": key, **meta}
+
+
+def _feed_entry(s: dict) -> dict:
+    meta = _discipline_meta(s.get("discipline"))
+    return {
+        "id": s["id"],
+        "date": s["scheduled_date"],
+        "discipline": meta["discipline"],
+        "discipline_label": meta["label"],
+        "icon": meta["icon"],
+        "accent": meta["accent"],
+        "session_type": s.get("session_type"),
+        "title": s.get("title"),
+        "duration_minutes": s.get("duration_actual_minutes")
+        or s.get("duration_planned_minutes"),
+        "distance_m": s.get("distance_m"),
+        "trimp": s.get("trimp_actual"),
+        "tonnage_kg": _tonnage_kg(s) or None,
+        "avg_hr": s.get("avg_hr"),
+        "rpe": s.get("session_rpe"),
+    }
+
+
+def _week_streak(completed_dates: set[date_type], today: date_type) -> int:
+    """Semaines consécutives (lundi-dimanche) avec au moins une séance.
+
+    La semaine en cours ne casse pas la série si elle est encore vide.
+    """
+    def week_monday(d: date_type) -> date_type:
+        return d - timedelta(days=d.weekday())
+
+    active = {week_monday(d) for d in completed_dates}
+    cursor = week_monday(today)
+    if cursor not in active:
+        cursor -= timedelta(weeks=1)
+    streak = 0
+    while cursor in active:
+        streak += 1
+        cursor -= timedelta(weeks=1)
+    return streak
+
+
 @router.post("/overview")
 def overview(req: OverviewRequest,
              repo: SupabaseRepo = Depends(get_repo)) -> dict:
