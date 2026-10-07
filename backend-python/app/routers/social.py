@@ -214,32 +214,52 @@ def feed(user_id: str, repo: SupabaseRepo = Depends(get_repo)) -> dict:
     today = date.today()
     accepted = [f for f in repo.list_friendships(user_id) if f["status"] == "accepted"]
     profiles = repo.get_profiles([_other(f, user_id) for f in accepted])
+    loaders = {_other(f, user_id): (
+        lambda fid=_other(f, user_id): _friend_sessions(repo, fid, today),
+        lambda fid=_other(f, user_id): repo.get_metrics_history(fid, days=28, until=today),
+    ) for f in accepted}
+    return {"friends": build_feed(user_id, accepted, profiles, loaders, today)}
+
+
+def _friend_sessions(repo: SupabaseRepo, friend_id: str, today: date) -> list[dict]:
+    return repo.get_sessions_between(
+        friend_id, today - timedelta(days=activity_compare.HISTORY_DAYS + FEED_DAYS), today)
+
+
+def build_feed(user_id: str, accepted: list[dict], profiles: dict,
+               loaders: dict, today: date) -> list[dict]:
+    """Flux des amis. `loaders[fid]` = (séances(), métriques()) : fonctions
+    appelées seulement si l'ami partage la catégorie correspondante, ou
+    valeurs déjà chargées (listes)."""
+    def get(v):
+        return v() if callable(v) else v
+
     out = []
     for f in accepted:
         fid = _other(f, user_id)
         p = profiles.get(fid) or {}
+        load_sessions, load_metrics = loaders.get(fid, (list, list))
         item = {"friendship_id": f["id"], "name": _display_name(p),
                 "shares_activities": bool(p.get("share_activities", True)),
                 "shares_physio": bool(p.get("share_physio", False)),
                 "week": None, "recent": [], "readiness": None}
         if item["shares_activities"]:
             try:
-                item.update(_activity_block(repo, fid, today))
+                item.update(_activity_block(get(load_sessions), today))
             except Exception:
                 log.exception("social_feed: séances indisponibles")
         if item["shares_physio"]:
             try:
                 # Niveau uniquement : jamais HRV, sommeil ou FC bruts.
-                item["readiness"] = _physio_readiness(repo, fid, today)["readiness"]["level"]
+                item["readiness"] = _physio_readiness(
+                    None, fid, today, metrics=get(load_metrics))["readiness"]["level"]
             except Exception:
                 log.exception("social_feed: forme indisponible")
         out.append(item)
-    return {"friends": out}
+    return out
 
 
-def _activity_block(repo: SupabaseRepo, friend_id: str, today: date) -> dict:
-    sessions = repo.get_sessions_between(
-        friend_id, today - timedelta(days=activity_compare.HISTORY_DAYS + FEED_DAYS), today)
+def _activity_block(sessions: list[dict], today: date) -> dict:
     done = [s for s in sessions if s.get("status") == "COMPLETED"]
     week_start = today - timedelta(days=today.weekday())
     week = {"sessions": 0, "minutes": 0, "distance_m": 0}
