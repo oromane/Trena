@@ -109,11 +109,12 @@
 - Si la dernière synchro a échoué, l'UI le dit (et propose de réessayer), au lieu de « pas assez de données ».
 **Dépendances.** P0-1.
 
-### P3-11 · Densité mobile / divulgation progressive — **M**
+### P3-11 · Densité mobile / divulgation progressive — **M** — ✅ FAIT (oct. 2026)
 **Problème.** Cockpit dense pensé desktop → scroll lourd sur mobile.
 **Solution.** Hiérarchie mobile (décision du jour → physio → reste replié), sections repliables, priorisation par contexte.
 **Critères d'acceptation.**
 - Sur mobile, la décision du jour est visible sans scroll ; les sections secondaires sont repliées par défaut.
+**Réalisé.** Mesuré à 390 px avec des données réalistes : 5 700 px -> 2 725 px (-52 %), desktop strictement identique. Cartes physio en 2x2 (explications via ⓘ), « Volume et disciplines » replié derrière un résumé de la semaine, flux limité à 5 séances avec « Afficher N séances de plus ». Composants `MobileCollapse` / `MobileLimit` en CSS pur (pas de détection de point de rupture en JS, donc pas de flash d'hydratation).
 **Dépendances.** —
 
 ### P3-12 · Passe de contraste extérieur — **S** — ✅ FAIT (oct. 2026)
