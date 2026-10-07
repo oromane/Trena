@@ -148,6 +148,7 @@ async def ask_stream(req: AskRequest,
     """Même logique que /ask, réponse en NDJSON progressif.
 
     Événements : meta {mode, sources} -> delta {text}* -> done | error.
+    `reset` : effacer le texte déjà reçu (raisonnement qui a fuité).
     Sur CPU la génération prend 20 à 40 s : le streaming affiche les premiers
     mots en quelques secondes au lieu d'un écran figé.
     """
@@ -176,11 +177,16 @@ async def ask_stream(req: AskRequest,
                 yield _event(type="error",
                              message="Conseiller momentanément indisponible.")
             return
+        def as_event(piece: str) -> str:
+            if piece == llm.RESET:
+                return _event(type="reset")
+            return _event(type="delta", text=piece)
+
         yield _event(type="meta", mode="llm", sources=src)
-        yield _event(type="delta", text=first)
+        yield as_event(first)
         try:
             async for piece in gen:
-                yield _event(type="delta", text=piece)
+                yield as_event(piece)
             yield _event(type="done")
         except llm.LLMUnavailable as e:
             log.warning("advisor: génération interrompue (%s)", e)

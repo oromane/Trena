@@ -34,7 +34,7 @@ services:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - LLM_BASE_URL=http://llm:11434
-      - LLM_MODEL=${LLM_MODEL:-qwen3:4b}
+      - LLM_MODEL=${LLM_MODEL:-qwen3:4b-instruct-2507-q4_K_M}
     restart: always
     networks:
       - app-network
@@ -70,7 +70,7 @@ services:
       - frontend
 
   # Conseiller IA local. Aucun port publié : seul le moteur l'interroge.
-  # Budget VPS 8 Go / 4 vCPU : qwen3:4b quantifié ~3 Go en charge, plafonné
+  # Budget VPS 8 Go / 4 vCPU : qwen3:4b-instruct-2507-q4_K_M quantifié ~3 Go en charge, plafonné
   # à 4 Go et 3 cœurs pour laisser respirer frontend, moteur et n8n.
   llm:
     image: ollama/ollama:latest
@@ -94,7 +94,7 @@ services:
   # Télécharge le modèle au premier démarrage (idempotent, puis s'arrête).
   llm-init:
     image: ollama/ollama:latest
-    entrypoint: ["ollama", "pull", "${LLM_MODEL:-qwen3:4b}"]
+    entrypoint: ["ollama", "pull", "${LLM_MODEL:-qwen3:4b-instruct-2507-q4_K_M}"]
     environment:
       - OLLAMA_HOST=http://llm:11434
     depends_on:

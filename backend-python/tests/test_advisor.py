@@ -245,3 +245,57 @@ def test_chat_stream_raises_on_http_error(monkeypatch):
 
     with pytest.raises(llm.LLMUnavailable):
         asyncio.run(collect())
+
+
+# ------------------------------------------------------------ fuite du raisonnement
+@pytest.mark.parametrize("pieces,expected,resets", [
+    # Variante « thinking » : raisonnement sans balise ouvrante
+    (["Okay, let's tackle ", "this.</think>", "\n\nTon HRV est bas."], "Ton HRV est bas.", 1),
+    # Balises complètes dans un seul morceau
+    (["<think>calcul</think>Bonjour"], "Bonjour", 0),
+    # Texte avant et après un raisonnement balisé
+    (["Avant <think>x", "y</think> après"], "Avant  après", 0),
+    # Aucun raisonnement
+    (["Ton HRV ", "est stable."], "Ton HRV est stable.", 0),
+])
+def test_strip_thinking(pieces, expected, resets):
+    out, in_think, n_reset = "", False, 0
+    for p in pieces:
+        text, in_think, reset = llm._strip_thinking(p, in_think)
+        if reset:
+            out, n_reset = "", n_reset + 1
+        out += text
+    # Les espaces de tête sont retirés par l'interface (premier delta).
+    assert out.strip() == expected.strip()
+    assert n_reset == resets
+
+
+def test_chat_strips_untagged_reasoning(monkeypatch):
+    import asyncio
+
+    import httpx
+
+    body = {"message": {"content": "Okay, let me think.</think>\n\nTon HRV est bas."}}
+    _mock_ollama(monkeypatch, lambda req: httpx.Response(200, json=body))
+    assert asyncio.run(llm.chat("s", "u")) == "Ton HRV est bas."
+
+
+def test_stream_emits_reset_for_leaked_reasoning(client, repo, monkeypatch):
+    import asyncio  # noqa: F401
+
+    import httpx
+    import json as _json
+
+    lines = [{"message": {"content": "Okay, let's tackle this."}},
+             {"message": {"content": "</think>Ton HRV est bas."}, "done": True}]
+    body = "\n".join(_json.dumps(x) for x in lines).encode()
+    _mock_ollama(monkeypatch, lambda req: httpx.Response(200, content=body))
+    ev = _events(stream(client, "C'est quoi le HRV ?"))
+    types = [e["type"] for e in ev]
+    assert types == ["meta", "delta", "reset", "delta", "done"]
+    assert ev[3]["text"] == "Ton HRV est bas."
+
+
+def test_default_model_is_instruct_variant():
+    # « qwen3:4b » seul pointe vers la variante thinking (lente, raisonnement visible).
+    assert "instruct" in settings.llm_model

@@ -14,6 +14,12 @@ from ..config import settings
 # font monter la RAM : on sérialise.
 _gate = asyncio.Semaphore(1)
 _THINK = re.compile(r"<think>.*?</think>", re.DOTALL)
+_THINK_END = "</think>"
+
+# Émis par chat_stream quand un raisonnement déjà diffusé doit être effacé :
+# certains modèles (variantes « thinking ») écrivent leur raisonnement sans
+# balise ouvrante, et on ne le reconnaît qu'à la balise fermante.
+RESET = "\x00reset"
 
 
 class LLMUnavailable(Exception):
@@ -28,7 +34,7 @@ async def chat(system: str, user: str) -> str:
         "keep_alive": "10m",
         "options": {
             "temperature": 0.2,
-            "num_ctx": 4096,
+            "num_ctx": 3072,
             "num_predict": settings.llm_max_tokens,
         },
         "messages": [
@@ -44,7 +50,9 @@ async def chat(system: str, user: str) -> str:
         content = r.json()["message"]["content"]
     except (httpx.HTTPError, KeyError, ValueError) as e:
         raise LLMUnavailable(str(e)) from e
-    content = _THINK.sub("", content).strip()
+    content = _THINK.sub("", content)
+    # Raisonnement sans balise ouvrante : tout ce qui précède </think> part.
+    content = content.split(_THINK_END)[-1].strip()
     if not content:
         raise LLMUnavailable("réponse vide")
     return content
@@ -63,7 +71,7 @@ async def chat_stream(system: str, user: str) -> AsyncIterator[str]:
         "keep_alive": "10m",
         "options": {
             "temperature": 0.2,
-            "num_ctx": 4096,
+            "num_ctx": 3072,
             "num_predict": settings.llm_max_tokens,
         },
         "messages": [
@@ -85,17 +93,43 @@ async def chat_stream(system: str, user: str) -> AsyncIterator[str]:
                             continue
                         chunk = json.loads(line)
                         piece = chunk.get("message", {}).get("content", "")
-                        # Garde-fou si un modèle émet malgré tout son raisonnement.
-                        if "<think>" in piece:
-                            in_think = True
-                        if not in_think and piece:
-                            yield piece
-                        if "</think>" in piece:
-                            in_think = False
+                        out, in_think, reset = _strip_thinking(piece, in_think)
+                        if reset:
+                            yield RESET
+                        if out:
+                            yield out
                         if chunk.get("done"):
                             break
         except (httpx.HTTPError, ValueError) as e:
             raise LLMUnavailable(str(e)) from e
+
+
+def _strip_thinking(piece: str, in_think: bool) -> tuple[str, bool, bool]:
+    """Retire le raisonnement d'un morceau de flux.
+
+    Returns:
+        (texte à diffuser, état « dans un raisonnement », reset demandé)
+    Un </think> rencontré hors raisonnement connu signifie que le texte déjà
+    diffusé était un raisonnement sans balise ouvrante : reset.
+    """
+    out, reset, buf = "", False, piece
+    while buf:
+        if in_think:
+            if _THINK_END not in buf:
+                break
+            buf = buf.split(_THINK_END, 1)[1]
+            in_think = False
+        elif "<think>" in buf:
+            before, buf = buf.split("<think>", 1)
+            out += before
+            in_think = True
+        elif _THINK_END in buf:
+            out, reset = "", True
+            buf = buf.split(_THINK_END, 1)[1].lstrip()
+        else:
+            out += buf
+            buf = ""
+    return out, in_think, reset
 
 
 async def is_up() -> bool:
