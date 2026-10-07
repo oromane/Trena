@@ -255,3 +255,27 @@ export async function getRecentMetrics(userId: string, limit = 14): Promise<Dail
     )) ?? []
   );
 }
+
+// ---------------------------------------------------------------- accueil
+export interface DashboardHome {
+  overview: DashboardOverview;
+  daily: AdvisorDaily;
+  friends: FriendFeedItem[];
+  profile: { full_name: string | null };
+}
+
+/** Accueil complet en un seul appel moteur (lectures parallélisées côté moteur). */
+export async function getDashboardHome(userId: string): Promise<DashboardHome | null> {
+  try {
+    const res = await fetch(`${ENGINE_URL}/dashboard/home`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Internal-Key': INTERNAL_KEY },
+      body: JSON.stringify({ user_id: userId }),
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}

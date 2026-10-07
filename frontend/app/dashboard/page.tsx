@@ -16,13 +16,7 @@ import ActivityFeed from '@/components/home/ActivityFeed';
 import PhysioGrid from '@/components/dashboard/PhysioGrid';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { ensureProfile } from '@/app/actions';
-import {
-  getAdvisorDaily,
-  getDashboardOverview,
-  getGarminStatus,
-  getProfile,
-  getSocialFeed,
-} from '@/lib/engine';
+import { getDashboardHome, getGarminStatus } from '@/lib/engine';
 import { FriendsCard } from '@/components/social/FriendFeed';
 import DailyCard from '@/components/advisor/DailyCard';
 
@@ -36,19 +30,24 @@ function freshnessLabel(dateStr: string, today: string): string {
 }
 
 export default async function DashboardPage() {
-  await ensureProfile();
   const supabase = await createSupabaseServer();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [overview, profile, garmin, daily, friends] = await Promise.all([
-    getDashboardOverview(user!.id),
-    getProfile(user!.id),
+  // Un seul appel moteur pour tout l'accueil (P1-4). Le statut Garmin (qui
+  // touche aux jetons) et la création du profil au premier accès partent en
+  // parallèle : l'accueil s'affiche même si le profil n'existe pas encore.
+  const [home, garmin] = await Promise.all([
+    getDashboardHome(user!.id),
     getGarminStatus(user!.id),
-    getAdvisorDaily(user!.id),
-    getSocialFeed(user!.id),
+    // Non bloquant : un échec ici ne doit pas faire tomber l'accueil.
+    ensureProfile().catch((e) => console.error('ensureProfile failed:', e)),
   ]);
+  const overview = home?.overview ?? null;
+  const daily = home?.daily ?? null;
+  const friends = home?.friends ?? [];
+  const profile = home?.profile ?? null;
 
   const rawName = user?.email?.split('@')[0] ?? 'athlète';
   const fallback = rawName.charAt(0).toUpperCase() + rawName.slice(1).split('.')[0];

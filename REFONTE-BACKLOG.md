@@ -44,7 +44,7 @@
 
 ## P1 — Performance & scalabilité
 
-### P1-4 · RPC Postgres unique pour `/dashboard/summary` — **L**
+### P1-4 · RPC Postgres unique pour `/dashboard/summary` — **L** — ✅ FAIT, reciblé (oct. 2026)
 **Problème.** Le `summary` enchaîne **séquentiellement** de nombreux appels PostgREST (objectif, 28 j métriques, 56 j+ séances, profil, calibration…). Latence = somme des allers-retours. Aucun batch/jointure.
 **Solution.** Une **fonction SQL** (`rpc: dashboard_summary(user_id, day)`) qui renvoie l'agrégat en **un** aller-retour ; garder le calcul Banister/Foster côté moteur mais lire les données en une passe (ou tout en SQL si réaliste).
 **Critères d'acceptation.**
@@ -52,6 +52,7 @@
 - Latence P95 du summary divisée par ≥ 2 (mesure avant/après).
 - Parité fonctionnelle (mêmes champs qu'aujourd'hui).
 **Dépendances.** P0-2 (accès unifié) idéalement.
+**Réalisé (reciblé).** `/dashboard/summary` n'existait plus ; le vrai coût était l'accueil, qui appelait 4 routes relisant chacune métriques et séances (jusqu'à 4 allers-retours enchaînés côté amis). Nouvelle route `POST /dashboard/home` : chaque donnée lue une fois, en 2 vagues parallèles, réutilisée par tous les blocs ; parité stricte testée avec les routes séparées. Banc (80 ms par requête, 1 ami) : 11 requêtes / 327 ms → 9 requêtes / 165 ms, et 4 appels HTTP Next → moteur → 1. Coût constant avec le nombre d'amis. Pas de RPC SQL : rien à déployer côté Supabase.
 
 ### P1-5 · Cache summary + Banister incrémental — **M**
 **Problème.** `cache: 'no-store'` partout → la simulation Banister 56 j est recalculée à chaque affichage ; `revalidatePath('/dashboard')` re-render complet après chaque micro-action.

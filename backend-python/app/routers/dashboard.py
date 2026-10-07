@@ -64,15 +64,16 @@ def _metric_block(today_val, series: list[float]) -> dict | None:
         "delta_pct": delta_pct,
     }
 
-def _physio_readiness(repo: SupabaseRepo, user_id: str,
-                      today: date_type) -> dict:
+def _physio_readiness(repo: SupabaseRepo | None, user_id: str,
+                      today: date_type, metrics: list[dict] | None = None) -> dict:
     """Métriques physiologiques du jour + niveau de readiness.
 
     Partagé par /summary et /overview : les seuils HRV et le libellé associé
     doivent rester strictement identiques entre les deux vues, sinon
     l'accueil et le détail course peuvent afficher des états contradictoires.
     """
-    metrics = repo.get_metrics_history(user_id, days=28, until=today)
+    if metrics is None:
+        metrics = repo.get_metrics_history(user_id, days=28, until=today)
     today_row = next(
         (m for m in metrics if m["recorded_date"] == today.isoformat()), {}
     )
@@ -251,19 +252,22 @@ def _feed_entry(s: dict) -> dict:
     }
 
 
-def _feed_with_analysis(repo: SupabaseRepo, user_id: str, recent: list[dict],
-                        sessions: list[dict]) -> list[dict]:
-    """Flux + analyse chiffrée instantanée + commentaire de Perlo s'il existe.
-
-    L'historique est celui déjà chargé pour l'accueil (120 j) : aucune
-    requête supplémentaire hors la lecture des commentaires (une requête).
-    """
+def _load_comments(repo: SupabaseRepo, user_id: str, ids: list[str]) -> dict:
     try:
-        comments = repo.get_activity_insights(user_id, [s["id"] for s in recent])
+        return repo.get_activity_insights(user_id, ids)
     except Exception:
         # Migration 014 non jouée : l'analyse chiffrée reste affichée.
         logger.warning("activity_insights indisponibles", exc_info=True)
-        comments = {}
+        return {}
+
+
+def _feed_with_analysis(recent: list[dict], sessions: list[dict],
+                        comments: dict) -> list[dict]:
+    """Flux + analyse chiffrée instantanée + commentaire de Perlo s'il existe.
+
+    L'historique est celui déjà chargé pour l'accueil (120 j) : aucune
+    requête supplémentaire.
+    """
     out = []
     for s in recent:
         entry = _feed_entry(s)
@@ -304,15 +308,27 @@ def overview(req: OverviewRequest,
     donc à aujourd'hui, il n'y a pas de séance future à remonter.
     """
     today = req.date or date_type.today()
-
     pr = _physio_readiness(repo, req.user_id, today)
-
     sessions = repo.get_sessions_between(
-        req.user_id,
-        today - timedelta(days=OVERVIEW_HISTORY_DAYS),
-        today,
-    )
+        req.user_id, today - timedelta(days=OVERVIEW_HISTORY_DAYS), today)
+    recent = recent_completed(sessions, today)
+    comments = _load_comments(repo, req.user_id, [s["id"] for s in recent])
+    return build_overview(today, pr, sessions, comments)
 
+
+def recent_completed(sessions: list[dict], today: date_type) -> list[dict]:
+    """Les dernières séances réalisées, toutes disciplines confondues."""
+    return sorted(
+        (s for s in sessions
+         if s.get("status") == "COMPLETED"
+         and date_type.fromisoformat(s["scheduled_date"]) <= today),
+        key=lambda s: s["scheduled_date"], reverse=True,
+    )[:RECENT_FEED_SIZE]
+
+
+def build_overview(today: date_type, pr: dict, sessions: list[dict],
+                   comments: dict) -> dict:
+    """Agrégat de l'accueil à partir de données déjà chargées (pur)."""
     def s_date(s: dict) -> date_type:
         return date_type.fromisoformat(s["scheduled_date"])
 
@@ -341,12 +357,7 @@ def overview(req: OverviewRequest,
         if d >= week_start:
             _accumulate(week_totals, s)
 
-    # Flux : les dernières séances réalisées, toutes disciplines confondues.
-    recent = sorted(
-        (s for s in sessions
-         if s.get("status") == "COMPLETED" and s_date(s) <= today),
-        key=lambda s: s["scheduled_date"], reverse=True,
-    )[:RECENT_FEED_SIZE]
+    recent = recent_completed(sessions, today)
 
     week_days = []
     for i in range(7):
@@ -381,7 +392,7 @@ def overview(req: OverviewRequest,
         "totals": {"week": week_totals, "month": month_totals},
         "by_discipline": tiles,
         "week": week_days,
-        "recent": _feed_with_analysis(repo, req.user_id, recent, sessions),
+        "recent": _feed_with_analysis(recent, sessions, comments),
         "streak_weeks": _week_streak(completed_dates, today),
         "active_days_28": len({d for d in completed_dates
                                if d > today - timedelta(days=28)}),

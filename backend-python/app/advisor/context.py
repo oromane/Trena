@@ -46,13 +46,20 @@ def _fmt(block: dict | None, scale: float = 1.0, nd: int = 1) -> dict | None:
     return out
 
 
-def build_context(repo: SupabaseRepo, user_id: str, today: date | None = None) -> dict:
+def build_context(repo: SupabaseRepo | None, user_id: str, today: date | None = None,
+                  *, metrics: list[dict] | None = None,
+                  sessions: list[dict] | None = None) -> dict:
+    """Contexte du jour. `metrics` (28 j) et `sessions` (fenêtre englobant
+    les 7 derniers jours) évitent de recharger ce que l'accueil a déjà lu."""
     today = today or date.today()
-    pr = _physio_readiness(repo, user_id, today)
+    pr = _physio_readiness(repo, user_id, today, metrics=metrics)
     physio = pr["physio"]
 
-    sessions = repo.get_sessions_between(user_id, today - timedelta(days=7), today)
-    done = [s for s in sessions if s.get("status") == "COMPLETED"]
+    week_ago = (today - timedelta(days=7)).isoformat()
+    if sessions is None:
+        sessions = repo.get_sessions_between(user_id, today - timedelta(days=7), today)
+    done = [s for s in sessions if s.get("status") == "COMPLETED"
+            and week_ago <= s["scheduled_date"] <= today.isoformat()]
 
     return {
         "date": today.isoformat(),

@@ -124,9 +124,13 @@ def get_or_summary(repo: SupabaseRepo, user_id: str, day: date | None = None) ->
         # Table absente (migration 013 non jouée) : on ne bloque pas l'affichage.
         log.warning("advisor_daily: lecture impossible", exc_info=True)
         row = None
+    return resolve(day, row, lambda: build_context(repo, user_id, day))
+
+
+def resolve(day: date, row: dict | None, ctx_factory) -> dict:
+    """Analyse LLM si elle existe, sinon synthèse (contexte calculé à la demande)."""
     if row and row.get("text"):
         return {"date": day.isoformat(), "text": row["text"], "source": "llm",
                 "generated_at": row.get("generated_at")}
-    ctx = build_context(repo, user_id, day)
-    return {"date": day.isoformat(), "text": summarize(ctx), "source": "summary",
+    return {"date": day.isoformat(), "text": summarize(ctx_factory()), "source": "summary",
             "generated_at": None}
