@@ -6,12 +6,13 @@
  */
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, Dumbbell, Gauge, LayoutGrid, UserRound } from 'lucide-react';
+import { BookOpen, Dumbbell, Gauge, LayoutGrid, UserRound, Users } from 'lucide-react';
 
 const TABS = [
   { href: '/dashboard', label: 'Accueil', icon: Gauge },
   { href: '/strength', label: 'Muscu', icon: Dumbbell },
   { href: '/autres', label: 'Autres', icon: LayoutGrid },
+  { href: '/amis', label: 'Amis', icon: Users },
   { href: '/guide', label: 'Guide', icon: BookOpen },
   { href: '/profile', label: 'Profil', icon: UserRound },
 ];

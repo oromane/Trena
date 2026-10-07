@@ -8,6 +8,7 @@ const LINKS = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/strength', label: 'Musculation' },
   { href: '/autres', label: 'Autres' },
+  { href: '/amis', label: 'Amis' },
   { href: '/guide', label: 'Guide' },
   { href: '/profile', label: 'Profil' },
 ];

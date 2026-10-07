@@ -470,6 +470,40 @@ class SupabaseRepo:
         )
         return rows[0] if rows else None
 
+    # ----------------------------------------------------------------- social
+    def get_profile_by_code(self, code: str) -> dict | None:
+        rows = self._get("/profiles", {"friend_code": f"eq.{code}",
+                                       "select": "id,full_name", "limit": "1"})
+        return rows[0] if rows else None
+
+    def get_profiles(self, ids: list[str]) -> dict[str, dict]:
+        if not ids:
+            return {}
+        rows = self._get("/profiles", {
+            "id": f"in.({','.join(ids)})",
+            "select": "id,full_name,share_activities,share_physio",
+        })
+        return {r["id"]: r for r in rows}
+
+    def list_friendships(self, user_id: str) -> list[dict]:
+        return self._get("/friendships", {
+            "or": f"(requester_id.eq.{user_id},addressee_id.eq.{user_id})",
+            "select": "*", "order": "created_at.desc",
+        })
+
+    def insert_friendship(self, requester_id: str, addressee_id: str) -> dict | None:
+        rows = self._post("/friendships", {"requester_id": requester_id,
+                                           "addressee_id": addressee_id})
+        return rows[0] if rows else None
+
+    def update_friendship(self, friendship_id: str, fields: dict) -> dict | None:
+        rows = self._patch("/friendships", {"id": f"eq.{friendship_id}"}, fields)
+        return rows[0] if rows else None
+
+    def delete_friendship(self, friendship_id: str) -> None:
+        r = self._client.delete("/friendships", params={"id": f"eq.{friendship_id}"})
+        self._raise(r, "/friendships")
+
 
 # Singleton paresseux, remplaçable dans les tests via dependency_overrides
 _repo: SupabaseRepo | None = None

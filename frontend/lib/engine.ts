@@ -165,3 +165,62 @@ export async function getAdvisorDaily(userId: string): Promise<AdvisorDaily | nu
     return null;
   }
 }
+
+// ---------------------------------------------------------------- amis
+export interface FriendItem {
+  friendship_id: string;
+  name: string;
+}
+
+export interface SocialMe {
+  friend_code: string;
+  prefs: { share_activities: boolean; share_physio: boolean };
+  friends: FriendItem[];
+  incoming: FriendItem[];
+  outgoing: FriendItem[];
+}
+
+export interface FriendActivity {
+  date: string;
+  discipline: string;
+  discipline_label: string;
+  icon: string;
+  accent: DisciplineAccent;
+  title: string | null;
+  duration_minutes: number | null;
+  distance_m: number | null;
+  headline: string;
+  tags: string[];
+}
+
+export interface FriendFeedItem extends FriendItem {
+  shares_activities: boolean;
+  shares_physio: boolean;
+  week: { sessions: number; minutes: number; distance_m: number } | null;
+  recent: FriendActivity[];
+  readiness: 'NORMAL' | 'CAUTION' | 'REDUCE' | null;
+}
+
+async function engineGet<T>(path: string): Promise<T | null> {
+  try {
+    const res = await fetch(`${ENGINE_URL}${path}`, {
+      headers: { 'X-Internal-Key': INTERNAL_KEY },
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export function getSocialMe(userId: string) {
+  return engineGet<SocialMe>(`/social/me?user_id=${encodeURIComponent(userId)}`);
+}
+
+export async function getSocialFeed(userId: string): Promise<FriendFeedItem[]> {
+  const r = await engineGet<{ friends: FriendFeedItem[] }>(
+    `/social/feed?user_id=${encodeURIComponent(userId)}`
+  );
+  return r?.friends ?? [];
+}
