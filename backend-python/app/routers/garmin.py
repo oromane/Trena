@@ -261,3 +261,70 @@ class ReplanRequest(BaseModel):
     trigger: str = "WEEKLY"
     window_days: int = 14
 
+
+
+# ------------------------------------------------------- recalcul du TRIMP
+class RecomputeTrimpRequest(BaseModel):
+    user_id: str
+    days: int = 365
+    apply: bool = False   # par défaut : simulation, rien n'est écrit
+
+
+@router.post("/recompute-trimp")
+def recompute_trimp(req: RecomputeTrimpRequest,
+                    repo: SupabaseRepo = Depends(get_repo)) -> dict:
+    """Recalcule le TRIMP des séances Garmin avec la méthode zonale (P2-7).
+
+    Sans `apply`, renvoie seulement l'écart avant/après : la charge historique
+    alimente Banister, l'ACWR et la calibration, on la regarde avant d'écrire.
+    Idempotent : relancé, il ne modifie que ce qui diffère encore.
+    """
+    from ..engine.trimp import session_trimp
+
+    if not 1 <= req.days <= 1095:
+        raise HTTPException(status_code=422, detail="days doit être entre 1 et 1095")
+    today = date_type.today()
+    hr_rest, hr_max, sex = _hr_params(repo, req.user_id)
+    sessions = [s for s in repo.get_sessions_between(
+                    req.user_id, today - timedelta(days=req.days), today)
+                if s.get("status") == "COMPLETED" and s.get("garmin_activity_id")]
+
+    methods: dict[str, int] = {}
+    changes = []
+    before = after = 0
+    for s in sessions:
+        m = s.get("activity_metrics") if isinstance(s.get("activity_metrics"), dict) else {}
+        duration = s.get("duration_actual_minutes") or 0
+        if duration <= 0:
+            continue
+        new, method = session_trimp(duration, s.get("avg_hr"), m.get("hr_time_in_zone_s"),
+                                    hr_rest, hr_max, sex, s.get("discipline"))
+        old = s.get("trimp_actual") or 0
+        methods[method] = methods.get(method, 0) + 1
+        before += old
+        after += new
+        if new != old or m.get("trimp_method") != method:
+            changes.append({"id": s["id"], "date": s["scheduled_date"], "title": s.get("title"),
+                            "discipline": s.get("discipline"), "before": old, "after": new,
+                            "method": method, "_metrics": m})
+
+    if req.apply:
+        for c in changes:
+            repo.update_session(c["id"], {
+                "trimp_actual": c["after"],
+                "activity_metrics": {**c["_metrics"], "trimp_method": c["method"]},
+            })
+
+    biggest = sorted(changes, key=lambda c: abs(c["after"] - c["before"]), reverse=True)[:5]
+    return {
+        "applied": req.apply,
+        "sessions_checked": len(sessions),
+        "sessions_changed": len(changes),
+        "methods": methods,
+        "total_trimp_before": before,
+        "total_trimp_after": after,
+        "total_change_pct": round((after - before) / before * 100, 1) if before else None,
+        "biggest_changes": [{k: v for k, v in c.items() if k not in ("id", "_metrics")}
+                            for c in biggest],
+        "hr_params": {"hr_rest": hr_rest, "hr_max": hr_max, "sex": sex},
+    }

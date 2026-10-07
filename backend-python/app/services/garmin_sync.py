@@ -503,7 +503,7 @@ def import_activities(repo, client: GarminClient, user_id: str,
     - Séance planifiée le même jour : passée en COMPLETED avec le réalisé.
     - Sinon : séance COMPLETED créée (activité hors plan, compte dans la charge).
     """
-    from ..engine.trimp import trimp as trimp_score
+    from ..engine.trimp import session_trimp
 
     until = until or date.today()
     start = until - timedelta(days=days - 1)
@@ -536,12 +536,6 @@ def import_activities(repo, client: GarminClient, user_id: str,
         duration_min = max(1, round(duration_s / 60))
         avg_hr = a.get("averageHR")
 
-        if avg_hr and hr_max > hr_rest:
-            trimp_val = round(trimp_score(duration_min, avg_hr, hr_rest,
-                                          hr_max, sex))
-        else:
-            trimp_val = round(duration_min * 1.2)  # fallback sans FC
-
         metrics = extract_activity_metrics(a)
         # Repli : si le résumé n'a pas le vecteur de zones FC, on récupère le
         # détail de l'activité (plus lent, un appel par sortie).
@@ -550,6 +544,13 @@ def import_activities(repo, client: GarminClient, user_id: str,
             zones = client.fetch_activity_hr_zones(activity_id)
             if zones:
                 metrics["hr_time_in_zone_s"] = zones
+
+        # TRIMP zonal si le vecteur de zones est fiable (P2-7), sinon FC
+        # moyenne, sinon durée seule. La méthode est tracée dans les métriques.
+        trimp_val, trimp_method = session_trimp(
+            duration_min, avg_hr, metrics.get("hr_time_in_zone_s"),
+            hr_rest, hr_max, sex, discipline)
+        metrics["trimp_method"] = trimp_method
 
         actuals = {
             "status": "COMPLETED",

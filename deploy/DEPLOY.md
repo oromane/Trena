@@ -202,6 +202,21 @@ qu'il l'accepte. Partage par catégorie, réglable par chacun :
 Mise en place (une fois) : exécuter `sql/migration-015.sql` dans l'éditeur SQL
 Supabase (colonnes de partage sur `profiles`, table `friendships`).
 
+### 6.7 TRIMP zonal (recalcul de l'historique, une fois)
+
+Les nouvelles séances Garmin utilisent le TRIMP zonal automatiquement. Pour
+aligner l'historique (sinon Banister et l'ACWR mélangent deux méthodes) :
+
+1. Simulation (n'écrit rien) :
+   ```bash
+   docker compose -f docker-compose.prod.yml exec performance-engine python -c "import httpx,os,json;print(json.dumps(httpx.post('http://localhost:8000/garmin/recompute-trimp',json={'user_id':'TON_USER_ID'},headers={'X-Internal-Key':os.environ['INTERNAL_API_KEY']},timeout=60).json(),indent=1,ensure_ascii=False))"
+   ```
+   Regarder `total_change_pct` et `biggest_changes` : les fractionnés montent,
+   les sorties régulières bougent peu.
+2. Application : relancer la même commande avec `'apply':True` dans le JSON.
+
+L'identifiant utilisateur se trouve dans Supabase (Authentication > Users).
+
 ## 7. Éteindre l'ancien hébergement PC
 
 - Ne lance plus `Trena-tunnel.bat` (l'ancien tunnel local est remplacé).
