@@ -18,7 +18,7 @@ const ZONES = [
     hi: 0.75,
     part: '≈ 75 % du volume',
     use: "Endurance fondamentale. Tu peux parler en phrases complètes. C'est là que se construit la base aérobie.",
-    cls: 'text-ats-green',
+    cls: 'text-ats-green-fg',
     bar: 'bg-ats-green',
   },
   {
@@ -28,7 +28,7 @@ const ZONES = [
     hi: 0.85,
     part: '≈ 8 % du volume',
     use: "La « zone grise » : trop dur pour récupérer, trop facile pour vraiment progresser. À utiliser peu.",
-    cls: 'text-ats-violet',
+    cls: 'text-ats-violet-fg',
     bar: 'bg-ats-violet',
   },
   {
@@ -38,7 +38,7 @@ const ZONES = [
     hi: 1,
     part: '≈ 17 % du volume',
     use: 'Seuil et fractionné. Développe la VO2max et la tolérance à haute intensité.',
-    cls: 'text-ats-orange',
+    cls: 'text-ats-orange-fg',
     bar: 'bg-ats-orange',
   },
 ];
@@ -97,11 +97,11 @@ export default function HeartRateZones() {
             {hrMax}
           </span>{' '}
           bpm — mais la vraie valeur se situe très probablement entre{' '}
-          <span className="metric font-semibold text-ats-orange">
+          <span className="metric font-semibold text-ats-orange-fg">
             {hrMax - 10}
           </span>{' '}
           et{' '}
-          <span className="metric font-semibold text-ats-orange">
+          <span className="metric font-semibold text-ats-orange-fg">
             {hrMax + 10}
           </span>{' '}
           bpm.

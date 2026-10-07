@@ -92,7 +92,7 @@ export default function SwimPace() {
       </div>
 
       {!valid ? (
-        <p className="px-5 py-4 text-sm text-ats-orange">
+        <p className="px-5 py-4 text-sm text-ats-orange-fg">
           Le temps sur 400 m doit être supérieur à celui sur 200 m.
         </p>
       ) : (
@@ -100,7 +100,7 @@ export default function SwimPace() {
           <div className="border-b border-white/5 px-5 py-4">
             <p className="flex flex-wrap items-baseline gap-2">
               <span className="text-sm text-ats-muted">Allure critique</span>
-              <span className="metric text-3xl font-semibold text-ats-blue">
+              <span className="metric text-3xl font-semibold text-ats-blue-fg">
                 {fmt(per100)}
               </span>
               <span className="text-xs text-ats-muted">/ 100 m</span>

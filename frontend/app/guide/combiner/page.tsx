@@ -133,7 +133,7 @@ export default function CombinerPage() {
             },
           ].map((r) => (
             <div key={r.n} className="card flex gap-4 p-5">
-              <span className="metric flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-ats-green/30 bg-ats-green/10 text-sm font-semibold text-ats-green">
+              <span className="metric flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-ats-green/30 bg-ats-green/10 text-sm font-semibold text-ats-green-fg">
                 {r.n}
               </span>
               <div>

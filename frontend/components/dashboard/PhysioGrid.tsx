@@ -98,7 +98,7 @@ const DEFS: Def[] = [
 function Delta({ block, higherIsBetter }: { block: MetricBlock; higherIsBetter: boolean }) {
   if (block.delta_pct === null) return null;
   const good = higherIsBetter ? block.delta_pct >= 0 : block.delta_pct <= 0;
-  const color = Math.abs(block.delta_pct) < 2 ? 'text-ats-muted' : good ? 'text-ats-green' : 'text-ats-red';
+  const color = Math.abs(block.delta_pct) < 2 ? 'text-ats-muted' : good ? 'text-ats-green-fg' : 'text-ats-red-fg';
   return (
     <span className={`metric text-xs font-medium ${color}`}>
       {block.delta_pct > 0 ? '+' : ''}

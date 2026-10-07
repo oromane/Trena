@@ -55,7 +55,7 @@ export default function SourcesPage() {
             </strong>{' '}
             indique si le DOI a été résolu auprès de l&apos;éditeur. Sur les{' '}
             {REFERENCES.length} références du guide,{' '}
-            <span className="metric font-semibold text-ats-green">
+            <span className="metric font-semibold text-ats-green-fg">
               {verified}
             </span>{' '}
             ont été confirmées ; les autres sont explicitement signalées comme
@@ -73,7 +73,7 @@ export default function SourcesPage() {
 
       <section className="mt-12">
         <div className="rounded-2xl border border-ats-blue/20 bg-ats-blue/[0.06] p-5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ats-blue">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ats-blue-fg">
             Ce que cette page ne garantit pas
           </p>
           <p className="mt-2 text-sm leading-relaxed text-ats-muted">

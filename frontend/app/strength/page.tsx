@@ -52,7 +52,7 @@ export default function StrengthPage() {
             className="card group flex items-center gap-5 p-6 transition-colors hover:bg-ats-card2"
           >
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-ats-green/20 bg-ats-green/10">
-              <Dumbbell className="h-6 w-6 text-ats-green" />
+              <Dumbbell className="h-6 w-6 text-ats-green-fg" />
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-lg font-semibold text-ats-text">
@@ -63,7 +63,7 @@ export default function StrengthPage() {
                 matériel nécessaire et repères d&apos;exécution.
               </p>
             </div>
-            <ArrowRight className="h-5 w-5 shrink-0 text-ats-gray transition-transform group-hover:translate-x-0.5 group-hover:text-ats-green" />
+            <ArrowRight className="h-5 w-5 shrink-0 text-ats-gray transition-transform group-hover:translate-x-0.5 group-hover:text-ats-green-fg" />
           </Link>
         </section>
 
@@ -79,12 +79,12 @@ export default function StrengthPage() {
                 href={href}
                 className="card group p-5 transition-colors hover:bg-ats-card2"
               >
-                <Icon className="h-5 w-5 text-ats-green" />
+                <Icon className="h-5 w-5 text-ats-green-fg" />
                 <p className="mt-3 font-semibold text-ats-text">{title}</p>
                 <p className="mt-1.5 text-sm leading-relaxed text-ats-muted">
                   {desc}
                 </p>
-                <span className="mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-ats-green">
+                <span className="mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-ats-green-fg">
                   Lire
                   <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
                 </span>

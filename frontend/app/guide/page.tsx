@@ -55,7 +55,7 @@ export default function GuideHome() {
     <div className="mx-auto max-w-4xl px-4 pb-20 pt-12 sm:px-6 xl:max-w-[76rem]">
       {/* Hero */}
       <header>
-        <p className="inline-flex items-center gap-2 rounded-full border border-ats-green/25 bg-ats-green/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-ats-green">
+        <p className="inline-flex items-center gap-2 rounded-full border border-ats-green/25 bg-ats-green/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-ats-green-fg">
           <Sparkles className="h-3 w-3" />
           Fondé sur la littérature scientifique
         </p>
@@ -91,7 +91,7 @@ export default function GuideHome() {
             >
               <p className="text-sm font-semibold text-ats-text">{x.q}</p>
               <p className="mt-1.5 text-sm text-ats-muted">{x.a}</p>
-              <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-ats-green">
+              <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-ats-green-fg">
                 Lire le détail
                 <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
               </span>
@@ -118,7 +118,7 @@ export default function GuideHome() {
                 className="card group flex items-start gap-4 p-5 transition-colors hover:bg-ats-card2"
               >
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-ats-green/20 bg-ats-green/10">
-                  <Icon className="h-5 w-5 text-ats-green" />
+                  <Icon className="h-5 w-5 text-ats-green-fg" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -134,7 +134,7 @@ export default function GuideHome() {
                     {s.summary}
                   </p>
                 </div>
-                <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-ats-gray transition-transform group-hover:translate-x-0.5 group-hover:text-ats-green" />
+                <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-ats-gray transition-transform group-hover:translate-x-0.5 group-hover:text-ats-green-fg" />
               </Link>
             );
           })}
@@ -168,7 +168,7 @@ export default function GuideHome() {
           </div>
           <Link
             href="/guide/musculation"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl border border-ats-green/30 bg-ats-green/10 px-4 py-2.5 text-sm font-semibold text-ats-green transition-colors hover:bg-ats-green/20"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl border border-ats-green/30 bg-ats-green/10 px-4 py-2.5 text-sm font-semibold text-ats-green-fg transition-colors hover:bg-ats-green/20"
           >
             Commencer par la musculation
             <ArrowRight className="h-4 w-4" />

@@ -17,9 +17,9 @@ import {
 } from '@/components/guide/videos';
 
 const FORMAT_CLS: Record<GuideVideo['format'], string> = {
-  lecture: 'border-ats-green/30 bg-ats-green/10 text-ats-green',
-  podcast: 'border-ats-violet/30 bg-ats-violet/10 text-ats-violet',
-  interview: 'border-ats-blue/30 bg-ats-blue/10 text-ats-blue',
+  lecture: 'border-ats-green/30 bg-ats-green/10 text-ats-green-fg',
+  podcast: 'border-ats-violet/30 bg-ats-violet/10 text-ats-violet-fg',
+  interview: 'border-ats-blue/30 bg-ats-blue/10 text-ats-blue-fg',
 };
 
 export default function VideoEmbed({ id }: { id: string }) {
@@ -28,7 +28,7 @@ export default function VideoEmbed({ id }: { id: string }) {
 
   if (!v) {
     return (
-      <p className="card p-4 text-sm text-ats-red">
+      <p className="card p-4 text-sm text-ats-red-fg">
         Vidéo « {id} » introuvable dans le registre.
       </p>
     );
@@ -62,7 +62,7 @@ export default function VideoEmbed({ id }: { id: string }) {
             />
             <span className="absolute inset-0 flex items-center justify-center">
               <span className="flex h-16 w-16 items-center justify-center rounded-full border border-white/20 bg-ats-bg/80 backdrop-blur-sm transition-transform group-hover:scale-105">
-                <Play className="ml-1 h-7 w-7 fill-ats-green text-ats-green" />
+                <Play className="ml-1 h-7 w-7 fill-ats-green text-ats-green-fg" />
               </span>
             </span>
           </button>
@@ -111,7 +111,7 @@ export default function VideoEmbed({ id }: { id: string }) {
           href={`https://www.youtube.com/watch?v=${v.youtubeId}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-[11px] font-medium text-ats-green hover:underline"
+          className="inline-flex items-center gap-1.5 text-[11px] font-medium text-ats-green-fg hover:underline"
         >
           Ouvrir sur YouTube
           <ExternalLink className="h-3 w-3" />

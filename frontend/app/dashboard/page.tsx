@@ -90,7 +90,7 @@ export default async function DashboardPage() {
                 {overview.physio.hrv?.today == null && (
                   <>
                     {' · '}
-                    <Link href="/profile" className="text-ats-green hover:underline">
+                    <Link href="/profile" className="text-ats-green-fg hover:underline">
                       synchroniser Garmin
                     </Link>
                   </>
@@ -116,7 +116,7 @@ export default async function DashboardPage() {
             >
               <div>
                 <p className="flex items-center gap-2 font-semibold text-ats-text">
-                  <BookOpen className="h-4 w-4 text-ats-green" />
+                  <BookOpen className="h-4 w-4 text-ats-green-fg" />
                   Comprendre ton entraînement
                 </p>
                 <p className="mt-1 text-xs leading-relaxed text-ats-muted">
@@ -124,7 +124,7 @@ export default async function DashboardPage() {
                   nutrition et cycle menstruel — chaque affirmation sourcée.
                 </p>
               </div>
-              <ArrowRight className="h-4 w-4 shrink-0 text-ats-gray transition-transform group-hover:translate-x-0.5 group-hover:text-ats-green" />
+              <ArrowRight className="h-4 w-4 shrink-0 text-ats-gray transition-transform group-hover:translate-x-0.5 group-hover:text-ats-green-fg" />
             </Link>
           </section>
         </div>

@@ -101,7 +101,7 @@ export default function ExerciseList({ muscle, limit = 50 }: ExerciseListProps) 
           ))}
         </div>
       ) : error ? (
-        <div className="card border border-ats-red/30 p-6 text-sm text-ats-red">Erreur : {error}</div>
+        <div className="card border border-ats-red/30 p-6 text-sm text-ats-red-fg">Erreur : {error}</div>
       ) : exercises.length === 0 ? (
         <div className="card flex flex-col items-center gap-2 p-12 text-center text-ats-muted">
           <SearchX className="h-6 w-6 text-ats-gray" />
@@ -138,7 +138,7 @@ export default function ExerciseList({ muscle, limit = 50 }: ExerciseListProps) 
               <div className="min-w-0 flex-1">
                 <h3 className="truncate font-bold capitalize">{exercise.name}</h3>
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  <span className="rounded-full bg-ats-green/10 px-2.5 py-0.5 text-xs font-medium capitalize text-ats-green">
+                  <span className="rounded-full bg-ats-green/10 px-2.5 py-0.5 text-xs font-medium capitalize text-ats-green-fg">
                     {MUSCLE_LABELS[exercise.muscle_primary] ?? exercise.muscle_primary}
                   </span>
                   {exercise.muscles_secondary.map((m) => (
@@ -176,7 +176,7 @@ export default function ExerciseList({ muscle, limit = 50 }: ExerciseListProps) 
                           key={i}
                           className="flex gap-2.5 text-[12px] leading-relaxed text-ats-muted"
                         >
-                          <span className="metric shrink-0 text-ats-green">
+                          <span className="metric shrink-0 text-ats-green-fg">
                             {i + 1}.
                           </span>
                           <span>{step}</span>

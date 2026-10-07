@@ -42,8 +42,8 @@ const MODE_LABEL: Record<Mode, { text: string; tone: string } | null> = {
   definition: { text: 'Définition · réponse instantanée', tone: 'text-ats-gray' },
   daily: { text: 'Analyse du jour · rédigée ce matin', tone: 'text-ats-gray' },
   summary: { text: 'Synthèse du jour · calculée par Trena', tone: 'text-ats-gray' },
-  glossary: { text: 'Définition de référence (IA indisponible)', tone: 'text-ats-orange' },
-  safety: { text: 'Message de sécurité', tone: 'text-ats-orange' },
+  glossary: { text: 'Définition de référence (IA indisponible)', tone: 'text-ats-orange-fg' },
+  safety: { text: 'Message de sécurité', tone: 'text-ats-orange-fg' },
 };
 
 
@@ -249,7 +249,7 @@ export default function Advisor() {
                         : 'Perlo analyse tes données…'}
                     </p>
                   )}
-                  {m.error && <p className="text-xs text-ats-red">{m.error}</p>}
+                  {m.error && <p className="text-xs text-ats-red-fg">{m.error}</p>}
                   {!m.pending && m.sources && m.sources.length > 0 && (
                     <p className="pt-1 text-[10px] text-ats-gray">
                       Réf. : {m.sources.map((s) => s.term).join(' · ')}

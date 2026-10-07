@@ -13,14 +13,22 @@
   --ats-card: 56 94 94;      /* #385E5E cartes (légèrement plus claires) */
   --ats-card2: 67 109 109;   /* #436D6D cartes imbriquées */
   --ats-text: 255 255 255;   /* #FFFFFF blanc pur */
-  --ats-muted: 190 208 208;  /* #BED0D0 gris-teal clair lisible */
+  --ats-muted: 214 226 226;  /* #D6E2E2 texte secondaire : 4,6:1 sur carte (AA) */
   --ats-green: 46 139 87;    /* #2E8B57 vert forêt — Primaire (fitness/NORMAL/Z1-Z2) */
   --ats-greendark: 33 110 68;/* #216E44 */
   --ats-blue: 79 134 168;    /* #4F86A8 bleu acier — endurance aérobie */
   --ats-orange: 255 69 0;    /* #FF4500 orange électrique — Secondaire (fatigue/CAUTION/Z4-Z5) */
   --ats-red: 220 68 55;      /* #DC4437 rouge brique — MISSED / suppression */
   --ats-violet: 124 111 168; /* #7C6FA8 violet montagne — tempo / seuil */
-  --ats-gray: 138 165 165;   /* #8AA5A5 gris-teal moyen */
+  --ats-gray: 194 208 208;   /* #C2D0D0 texte tertiaire : 4,5:1 sur carte (AA) */
+  /* Variantes TEXTE des accents (P3-12) : même teinte, plus claires, >= 4,5:1
+     sur carte et fond. Les accents d'origine restent pour fonds, bordures,
+     pastilles et courbes, où ils sont lisibles. */
+  --ats-green-fg: 147 224 181;  /* #93E0B5 */
+  --ats-blue-fg: 178 212 233;   /* #B2D4E9 */
+  --ats-orange-fg: 255 194 171; /* #FFC2AB */
+  --ats-red-fg: 244 196 192;    /* #F4C4C0 */
+  --ats-violet-fg: 213 204 240; /* #D5CCF0 */
   --ats-border: rgba(255, 255, 255, 0.13);
   --ats-chart-grid: #436D6D;
 }
@@ -32,11 +40,16 @@
   --ats-card: 252 251 247;   /* #FCFBF7 */
   --ats-card2: 236 233 223;  /* #ECE9DF */
   --ats-text: 30 41 59;      /* #1E293B slate-800 */
-  --ats-muted: 91 107 132;   /* #5B6B84 */
+  --ats-muted: 88 104 128;   /* #586880 */
   --ats-green: 34 119 73;    /* #227749 forêt lisible sur clair */
   --ats-greendark: 27 94 58; /* #1B5E3A */
   --ats-orange: 214 58 0;    /* #D63A00 orange contrasté sur clair */
-  --ats-gray: 148 163 184;   /* #94A3B8 */
+  --ats-gray: 95 104 118;    /* #5F6876 : 4,6:1 sur papier (AA) */
+  --ats-green-fg: 31 110 66;    /* #1F6E42 */
+  --ats-blue-fg: 63 107 134;    /* #3F6B86 */
+  --ats-orange-fg: 190 52 0;    /* #BE3400 */
+  --ats-red-fg: 185 57 46;      /* #B9392E */
+  --ats-violet-fg: 107 95 144;  /* #6B5F90 */
   --ats-border: rgba(30, 41, 59, 0.12);
   --ats-chart-grid: #dad5c7;
 }

@@ -19,7 +19,7 @@ export default function AskButton({
       onClick={() => askAdvisor(question)}
       className={`inline-flex items-center gap-1 text-[11px] font-medium text-ats-muted underline-offset-2 transition-colors hover:text-ats-text hover:underline ${className}`}
     >
-      <MessageCircleQuestion className="h-3.5 w-3.5 text-ats-green" />
+      <MessageCircleQuestion className="h-3.5 w-3.5 text-ats-green-fg" />
       {label}
     </button>
   );

@@ -21,7 +21,7 @@ export default function GuideLayout({
       <footer className="border-t border-white/5 bg-ats-bg2/40">
         <div className="mx-auto max-w-4xl space-y-4 px-4 py-10 sm:px-6 xl:max-w-[76rem]">
           <div className="rounded-2xl border border-ats-orange/20 bg-ats-orange/[0.06] p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ats-orange">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ats-orange-fg">
               Avertissement médical
             </p>
             <p className="mt-2 text-sm leading-relaxed text-ats-muted">

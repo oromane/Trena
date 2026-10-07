@@ -47,9 +47,9 @@ const FORMATS: {
 ];
 
 const DISCIPLINES = [
-  { key: 'swim' as const, label: 'Natation', cls: 'bg-ats-blue', text: 'text-ats-blue' },
-  { key: 'bike' as const, label: 'Vélo', cls: 'bg-ats-green', text: 'text-ats-green' },
-  { key: 'run' as const, label: 'Course', cls: 'bg-ats-orange', text: 'text-ats-orange' },
+  { key: 'swim' as const, label: 'Natation', cls: 'bg-ats-blue', text: 'text-ats-blue-fg' },
+  { key: 'bike' as const, label: 'Vélo', cls: 'bg-ats-green', text: 'text-ats-green-fg' },
+  { key: 'run' as const, label: 'Course', cls: 'bg-ats-orange', text: 'text-ats-orange-fg' },
 ];
 
 function fmtHours(h: number): string {
@@ -82,7 +82,7 @@ export default function TriSplit() {
                 title={x.detail}
                 className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
                   x.key === format
-                    ? 'border-ats-green/40 bg-ats-green/15 text-ats-green'
+                    ? 'border-ats-green/40 bg-ats-green/15 text-ats-green-fg'
                     : 'border-white/10 text-ats-muted hover:border-white/20 hover:text-ats-text'
                 }`}
               >

@@ -116,11 +116,12 @@
 - Sur mobile, la décision du jour est visible sans scroll ; les sections secondaires sont repliées par défaut.
 **Dépendances.** —
 
-### P3-12 · Passe de contraste extérieur — **S**
+### P3-12 · Passe de contraste extérieur — **S** — ✅ FAIT (oct. 2026)
 **Problème.** Palette teal-sur-teal limite en plein soleil (objectif produit revendiqué).
 **Solution.** Auditer les contrastes (WCAG AA) sur fond `#2F4F4F` ; relever `muted`/`gray` si nécessaire ; tester en luminosité élevée.
 **Critères d'acceptation.**
 - Texte secondaire ≥ AA sur les surfaces principales.
+**Réalisé.** Audit mesuré (sombre : accents utilisés en texte à 1,3-2,6:1, gris tertiaire 2,7:1). Variantes texte `ats-*-fg` (même teinte, plus claires en sombre, plus foncées en clair) pour vert/bleu/orange/rouge/violet ; `muted` et `gray` relevés ; accents d'origine conservés pour fonds, bordures et courbes. 172 usages migrés. `scripts/check_contrast.py` en CI : 8 couleurs de texte x 4 surfaces x 2 thèmes.
 **Dépendances.** —
 
 ---

@@ -97,10 +97,10 @@ function Row({ entry, today }: { entry: FeedEntry; today: string }) {
 }
 
 const TAG_TONE: Record<string, string> = {
-  record: 'text-ats-violet',
-  efficiency: 'text-ats-green',
-  hard: 'text-ats-orange',
-  easy: 'text-ats-blue',
+  record: 'text-ats-violet-fg',
+  efficiency: 'text-ats-green-fg',
+  hard: 'text-ats-orange-fg',
+  easy: 'text-ats-blue-fg',
 };
 
 /**
@@ -138,7 +138,7 @@ function Analysis({ entry }: { entry: FeedEntry }) {
           <ul className="space-y-1">
             {a.facts.map((f, i) => (
               <li key={i} className="flex gap-2">
-                <span className="text-ats-green">•</span>
+                <span className="text-ats-green-fg">•</span>
                 <span>{f}</span>
               </li>
             ))}

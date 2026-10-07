@@ -21,9 +21,9 @@ import {
 } from '@/components/guide/references';
 
 const STRENGTH_CLS: Record<EvidenceStrength, string> = {
-  high: 'border-ats-green/30 bg-ats-green/10 text-ats-green',
-  moderate: 'border-ats-blue/30 bg-ats-blue/10 text-ats-blue',
-  low: 'border-ats-orange/30 bg-ats-orange/10 text-ats-orange',
+  high: 'border-ats-green/30 bg-ats-green/10 text-ats-green-fg',
+  moderate: 'border-ats-blue/30 bg-ats-blue/10 text-ats-blue-fg',
+  low: 'border-ats-orange/30 bg-ats-orange/10 text-ats-orange-fg',
 };
 
 /**
@@ -99,7 +99,7 @@ export function ReferenceCard({
       {r.limitations && <Field label="Limites" value={r.limitations} />}
       {r.erratum && (
         <span className="block rounded-lg border border-ats-orange/25 bg-ats-orange/[0.07] p-2.5">
-          <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-ats-orange">
+          <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-ats-orange-fg">
             Correction publiée
           </span>
           <span className="mt-0.5 block text-[11px] leading-relaxed text-ats-muted">
@@ -111,7 +111,7 @@ export function ReferenceCard({
       <span className="block space-y-2 border-t border-white/10 pt-2.5">
         <span
           className={`flex items-start gap-1.5 text-[10px] leading-relaxed ${
-            isVerified ? 'text-ats-green' : 'text-ats-orange'
+            isVerified ? 'text-ats-green-fg' : 'text-ats-orange-fg'
           }`}
         >
           {isVerified ? (
@@ -132,7 +132,7 @@ export function ReferenceCard({
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-[11px] font-medium text-ats-green hover:underline"
+            className="inline-flex items-center gap-1.5 text-[11px] font-medium text-ats-green-fg hover:underline"
           >
             {r.doi ? `DOI ${r.doi}` : `PubMed ${r.pmid}`}
             <ExternalLink className="h-3 w-3" />
@@ -172,7 +172,7 @@ export default function Cite({ id }: { id: string }) {
   // plutôt que de disparaître silencieusement du texte.
   if (!r) {
     return (
-      <sup className="ml-0.5 font-mono text-[10px] text-ats-red">[?{id}]</sup>
+      <sup className="ml-0.5 font-mono text-[10px] text-ats-red-fg">[?{id}]</sup>
     );
   }
 
@@ -185,7 +185,7 @@ export default function Cite({ id }: { id: string }) {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-label={`Source ${n} : ${r.title}`}
-        className="ml-0.5 cursor-help rounded-sm px-1.5 py-0.5 align-super font-mono text-[10px] font-semibold text-ats-green transition-colors hover:bg-ats-green/15 focus:outline-none focus-visible:ring-1 focus-visible:ring-ats-green"
+        className="ml-0.5 cursor-help rounded-sm px-1.5 py-0.5 align-super font-mono text-[10px] font-semibold text-ats-green-fg transition-colors hover:bg-ats-green/15 focus:outline-none focus-visible:ring-1 focus-visible:ring-ats-green"
       >
         [{n}]
       </button>

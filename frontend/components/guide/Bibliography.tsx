@@ -15,9 +15,9 @@ import {
 } from '@/components/guide/references';
 
 const STRENGTH_CLS: Record<EvidenceStrength, string> = {
-  high: 'text-ats-green',
-  moderate: 'text-ats-blue',
-  low: 'text-ats-orange',
+  high: 'text-ats-green-fg',
+  moderate: 'text-ats-blue-fg',
+  low: 'text-ats-orange-fg',
 };
 
 /**
@@ -51,7 +51,7 @@ export default function Bibliography({
           return (
             <li key={r.id} className="card p-4">
               <div className="flex gap-3">
-                <span className="metric shrink-0 text-xs font-semibold text-ats-green">
+                <span className="metric shrink-0 text-xs font-semibold text-ats-green-fg">
                   [{REFERENCE_INDEX[r.id]}]
                 </span>
                 <div className="min-w-0 flex-1">
@@ -70,7 +70,7 @@ export default function Bibliography({
                     </span>
                     {r.sample && <span className="text-ats-gray">{r.sample}</span>}
                     {r.verified === 'unverified' && (
-                      <span className="inline-flex items-center gap-1 text-ats-orange">
+                      <span className="inline-flex items-center gap-1 text-ats-orange-fg">
                         <ShieldQuestion className="h-3 w-3" />
                         non vérifiée en ligne
                       </span>
@@ -81,7 +81,7 @@ export default function Bibliography({
                       href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-medium text-ats-green hover:underline"
+                      className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-medium text-ats-green-fg hover:underline"
                     >
                       {r.doi ? `DOI ${r.doi}` : `PubMed ${r.pmid}`}
                       <ExternalLink className="h-3 w-3" />
