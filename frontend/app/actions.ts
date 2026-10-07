@@ -40,74 +40,6 @@ export async function ensureProfile() {
   }
 }
 
-export async function createObjective(formData: FormData) {
-  const { supabase, user } = await requireUser();
-  const { error } = await supabase.from('objectives').insert({
-    user_id: user.id,
-    title: String(formData.get('title')),
-    target_date: String(formData.get('target_date')),
-    sport_type: String(formData.get('sport_type')),
-    target_time_seconds: formData.get('target_time_minutes')
-      ? Number(formData.get('target_time_minutes')) * 60
-      : null,
-    distance_m: formData.get('distance_km')
-      ? Math.round(Number(formData.get('distance_km')) * 1000)
-      : null,
-    is_active: true,
-  });
-  if (error) throw new Error(error.message);
-  revalidatePath('/objectives');
-}
-
-/** Modifie / personnalise un objectif existant. */
-export async function updateObjective(formData: FormData) {
-  const { supabase, user } = await requireUser();
-  const { error } = await supabase
-    .from('objectives')
-    .update({
-      title: String(formData.get('title')),
-      target_date: String(formData.get('target_date')),
-      sport_type: String(formData.get('sport_type')),
-      target_time_seconds: formData.get('target_time_minutes')
-        ? Number(formData.get('target_time_minutes')) * 60
-        : null,
-      distance_m: formData.get('distance_km')
-        ? Math.round(Number(formData.get('distance_km')) * 1000)
-        : null,
-    })
-    .eq('id', String(formData.get('id')))
-    .eq('user_id', user.id);
-  if (error) throw new Error(error.message);
-  revalidatePath('/objectives');
-  revalidatePath('/dashboard');
-}
-
-/** Active ou désactive un objectif (l'actif pilote le plan et le cockpit). */
-export async function setObjectiveActive(formData: FormData) {
-  const { supabase, user } = await requireUser();
-  const { error } = await supabase
-    .from('objectives')
-    .update({ is_active: formData.get('active') === 'true' })
-    .eq('id', String(formData.get('id')))
-    .eq('user_id', user.id);
-  if (error) throw new Error(error.message);
-  revalidatePath('/objectives');
-  revalidatePath('/dashboard');
-}
-
-/** Supprime un objectif (ses séances rattachées partent en cascade). */
-export async function deleteObjective(formData: FormData) {
-  const { supabase, user } = await requireUser();
-  const { error } = await supabase
-    .from('objectives')
-    .delete()
-    .eq('id', String(formData.get('id')))
-    .eq('user_id', user.id);
-  if (error) throw new Error(error.message);
-  revalidatePath('/objectives');
-  revalidatePath('/dashboard');
-}
-
 export async function saveDailyMetrics(formData: FormData) {
   const { supabase, user } = await requireUser();
   const { error } = await supabase.from('daily_metrics').upsert(
@@ -123,249 +55,13 @@ export async function saveDailyMetrics(formData: FormData) {
     { onConflict: 'user_id,recorded_date' }
   );
   if (error) throw new Error(error.message);
-  revalidatePath('/metrics');
+  revalidatePath('/profile');
   revalidatePath('/dashboard');
-}
-
-export async function updateAvailability(formData: FormData) {
-  const { supabase, user } = await requireUser();
-  const mask = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map((d) =>
-    Number(formData.get(d) ?? 0)
-  );
-  const { error } = await supabase
-    .from('profiles')
-    .update({ weekly_availability_mask: mask })
-    .eq('id', user.id);
-  if (error) throw new Error(error.message);
-  revalidatePath('/settings');
-}
-
-export async function generatePlan() {
-  const { user } = await requireUser();
-  await engineFetch('/plan/generate', { user_id: user.id, persist: true });
-  revalidatePath('/dashboard');
-}
-
-export async function runDailyAdjust() {
-  const { user } = await requireUser();
-  await engineFetch('/daily-adjust/run', { user_id: user.id });
-  revalidatePath('/dashboard');
-}
-
-/** Publie les séances planifiées non encore synchronisées dans Google Calendar. */
-export async function publishPlanToCalendar() {
-  const { user } = await requireUser();
-  let flag = 'publish_error';
-  try {
-    const result = await engineFetch('/calendar/publish', { user_id: user.id });
-    flag = `published_${result.events_created ?? 0}`;
-  } catch (e) {
-    console.error('publish failed:', e);
-  }
-  revalidatePath('/dashboard');
-  redirect(`/dashboard?calendar=${flag}`);
-}
-
-/** Supprime la liaison Google Calendar (tokens effacés en base). */
-export async function unlinkGoogleCalendar() {
-  const { user } = await requireUser();
-  const res = await fetch(`${ENGINE_URL}/calendar/tokens/${user.id}`, {
-    method: 'DELETE',
-    headers: { 'X-Internal-Key': INTERNAL_KEY },
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error(`Engine ${res.status}: ${await res.text()}`);
-  revalidatePath('/dashboard');
-}
-
-/** Supprime TOUS les événements Trena du Google Calendar (doublons inclus). */
-export async function purgeCalendar() {
-  const { user } = await requireUser();
-  let flag = 'purge_error';
-  try {
-    const r = await engineFetch('/calendar/purge', { user_id: user.id });
-    flag = `purged_${r.events_deleted ?? 0}`;
-  } catch (e) {
-    console.error('purge failed:', e);
-  }
-  revalidatePath('/dashboard');
-  redirect(`/dashboard?calendar=${flag}`);
 }
 
 // ----------------------------------------------------------------- Séances
-export async function rescheduleSession(formData: FormData) {
-  const { user } = await requireUser();
-  try {
-    await engineFetch('/sessions/reschedule', {
-      user_id: user.id,
-      session_id: String(formData.get('session_id')),
-      new_date: String(formData.get('new_date')),
-      new_time: formData.get('new_time') ? String(formData.get('new_time')) : null,
-    });
-  } catch (e) {
-    console.error('rescheduleSession:', e);
-  }
-  revalidatePath('/dashboard');
-}
-
-export async function createSession(formData: FormData) {
-  const { user } = await requireUser();
-  const templateId = formData.get('template_id');
-  const customJson = formData.get('custom_workout');
-  const structuredJson = formData.get('structured_workout');
-  const base = {
-    user_id: user.id,
-    scheduled_date: String(formData.get('scheduled_date')),
-    scheduled_time: formData.get('scheduled_time')
-      ? String(formData.get('scheduled_time'))
-      : null,
-  };
-  if (structuredJson) {
-    // Constructeur structuré : types de blocs, conditions, cibles
-    await engineFetch('/sessions/create', {
-      ...base,
-      structured: JSON.parse(String(structuredJson)),
-    });
-  } else if (customJson) {
-    // Constructeur libre : titre + étapes sérialisés par le client
-    await engineFetch('/sessions/create', {
-      ...base,
-      custom: JSON.parse(String(customJson)),
-    });
-  } else if (templateId) {
-    // Séance structurée depuis un modèle : collecte des param_<clé>
-    const params: Record<string, number> = {};
-    for (const [key, value] of formData.entries()) {
-      if (key.startsWith('param_')) params[key.slice(6)] = Number(value);
-    }
-    await engineFetch('/sessions/create', {
-      ...base,
-      template_id: String(templateId),
-      params,
-    });
-  } else {
-    await engineFetch('/sessions/create', {
-      ...base,
-      session_type: String(formData.get('session_type')),
-      duration_minutes: Number(formData.get('duration_minutes')),
-    });
-  }
-  revalidatePath('/dashboard');
-}
-
-/** Personnalise une séance : planification, type/durée/titre, ou constructeur. */
-export async function updateSession(formData: FormData) {
-  const { user } = await requireUser();
-  const customJson = formData.get('custom_workout');
-  const structuredJson = formData.get('structured_workout');
-  const body: Record<string, unknown> = {
-    user_id: user.id,
-    session_id: String(formData.get('session_id')),
-  };
-  if (formData.get('new_date')) body.scheduled_date = String(formData.get('new_date'));
-  if (formData.get('new_time')) body.scheduled_time = String(formData.get('new_time'));
-  if (structuredJson) {
-    body.structured = JSON.parse(String(structuredJson));
-  } else if (customJson) {
-    body.custom = JSON.parse(String(customJson));
-  } else {
-    if (formData.get('session_type')) body.session_type = String(formData.get('session_type'));
-    if (formData.get('duration_minutes'))
-      body.duration_minutes = Number(formData.get('duration_minutes'));
-    if (formData.get('title') !== null) body.title = String(formData.get('title'));
-  }
-  try {
-    await engineFetch('/sessions/update', body);
-  } catch (e) {
-    console.error('updateSession:', e);
-  }
-  revalidatePath('/dashboard');
-}
-
-export async function deleteSession(formData: FormData) {
-  const { user } = await requireUser();
-  try {
-    await engineFetch('/sessions/delete', {
-      user_id: user.id,
-      session_id: String(formData.get('session_id')),
-    });
-  } catch (e) {
-    // Séance déjà supprimée / introuvable : suppression idempotente,
-    // on ne fait pas planter la page pour autant.
-    console.error('deleteSession:', e);
-  }
-  revalidatePath('/dashboard');
-}
 
 // ---------------------------------------- bibliothèque de séances (test)
-/** Enregistre la séance construite dans la bibliothèque (isolée du moteur). */
-export async function saveToLibrary(formData: FormData) {
-  const { user } = await requireUser();
-  const custom = formData.get('custom_workout');
-  const structured = formData.get('structured_workout');
-  await engineFetch('/sessions/library/save', {
-    user_id: user.id,
-    custom: custom ? JSON.parse(String(custom)) : null,
-    structured: structured ? JSON.parse(String(structured)) : null,
-  });
-  revalidatePath('/dashboard');
-}
-
-/** Instancie un modèle de la bibliothèque en séance planifiée. */
-export async function scheduleFromLibrary(formData: FormData) {
-  const { user } = await requireUser();
-  try {
-    await engineFetch('/sessions/library/schedule', {
-      user_id: user.id,
-      template_id: String(formData.get('template_id')),
-      scheduled_date: String(formData.get('scheduled_date')),
-      scheduled_time: formData.get('scheduled_time')
-        ? String(formData.get('scheduled_time'))
-        : null,
-    });
-  } catch (e) {
-    console.error('scheduleFromLibrary:', e);
-  }
-  revalidatePath('/dashboard');
-}
-
-/** Supprime un modèle de la bibliothèque. */
-export async function deleteFromLibrary(formData: FormData) {
-  const { user } = await requireUser();
-  try {
-    await engineFetch('/sessions/library/delete', {
-      user_id: user.id,
-      template_id: String(formData.get('template_id')),
-    });
-  } catch (e) {
-    console.error('deleteFromLibrary:', e);
-  }
-  revalidatePath('/dashboard');
-}
-
-/** Validation manuelle d'une séance : la marque comme faite (→ historique). */
-export async function completeSession(formData: FormData) {
-  const { user } = await requireUser();
-  const numOrNull = (key: string) => {
-    const v = formData.get(key);
-    return v ? Number(v) : null;
-  };
-  try {
-    await engineFetch('/sessions/complete', {
-      user_id: user.id,
-      session_id: String(formData.get('session_id')),
-      done: formData.get('done') !== 'false',
-      actual_minutes: numOrNull('actual_minutes'),
-      actual_distance_m: numOrNull('actual_distance_km') != null
-        ? Math.round(Number(formData.get('actual_distance_km')) * 1000)
-        : null,
-      actual_avg_hr: numOrNull('actual_avg_hr'),
-    });
-  } catch (e) {
-    console.error('completeSession:', e);
-  }
-  revalidatePath('/dashboard');
-}
 
 // ------------------------------------------------------------------ Profil
 export async function updateProfile(formData: FormData) {
@@ -424,8 +120,8 @@ export async function unlinkGarmin() {
     cache: 'no-store',
   });
   if (!res.ok) throw new Error(`Engine ${res.status}`);
-  revalidatePath('/metrics');
-  redirect('/metrics?garmin=unlinked');
+  revalidatePath('/profile');
+  redirect('/profile?garmin=unlinked');
 }
 
 /** Synchronise les 14 derniers jours depuis Garmin Connect (métriques + bien-être + activités). */
@@ -441,8 +137,8 @@ export async function syncGarmin() {
     console.error('garmin sync failed:', e);
     flag = 'sync_error';
   }
-  revalidatePath('/metrics');
-  redirect(`/metrics?garmin=${flag}`);
+  revalidatePath('/profile');
+  redirect(`/profile?garmin=${flag}`);
 }
 
 /** Importe les activités réalisées des 30 derniers jours (TRIMP réel). */
@@ -458,9 +154,9 @@ export async function importGarminActivities() {
   } catch (e) {
     console.error('garmin import failed:', e);
   }
-  revalidatePath('/metrics');
+  revalidatePath('/profile');
   revalidatePath('/dashboard');
-  redirect(`/metrics?garmin=${flag}`);
+  redirect(`/profile?garmin=${flag}`);
 }
 
 /** Paramètres cardiaques du profil (TRIMP réel : FC max, FC repos, sexe). */

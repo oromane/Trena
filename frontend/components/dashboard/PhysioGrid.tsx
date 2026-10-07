@@ -2,11 +2,11 @@
  * État physiologique — chaque métrique répond à « où j'en suis vs ma norme ? »
  */
 import { Activity, HeartPulse, Moon, Zap } from 'lucide-react';
-import type { DashboardSummary, MetricBlock } from '@/lib/engine';
+import type { DashboardOverview, MetricBlock } from '@/lib/engine';
 import InfoTooltip from '@/components/InfoTooltip';
 
 type Def = {
-  key: keyof DashboardSummary['physio'];
+  key: keyof DashboardOverview['physio'];
   label: string;
   unit: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -101,7 +101,7 @@ function Delta({ block, higherIsBetter }: { block: MetricBlock; higherIsBetter: 
   );
 }
 
-export default function PhysioGrid({ physio }: { physio: DashboardSummary['physio'] }) {
+export default function PhysioGrid({ physio }: { physio: DashboardOverview['physio'] }) {
   const available = DEFS.filter((d) => physio[d.key]?.today != null || physio[d.key]?.baseline != null);
 
   if (available.length === 0) {

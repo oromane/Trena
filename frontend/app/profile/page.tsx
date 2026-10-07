@@ -1,13 +1,31 @@
-import { Download, HeartPulse, KeyRound, Mail, User } from 'lucide-react';
+import {
+  Download,
+  HeartPulse,
+  KeyRound,
+  Mail,
+  RefreshCw,
+  TrendingUp,
+  User,
+  Watch,
+} from 'lucide-react';
 import Nav from '@/components/Nav';
 import Footer from '@/components/Footer';
+import GarminLink from '@/components/GarminLink';
+import TrendsChart from '@/components/TrendsChart';
+import SubmitButton from '@/components/SubmitButton';
+import SyncStatusPoller from '@/components/SyncStatusPoller';
 import {
+  importGarminActivities,
+  saveDailyMetrics,
+  syncGarmin,
+  unlinkGarmin,
   updateEmail,
   updateHeartProfile,
   updatePassword,
   updateProfile,
 } from '@/app/actions';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { getGarminStatus } from '@/lib/engine';
 
 const MESSAGES: Record<string, { text: string; ok: boolean }> = {
   profile_saved: { text: 'Profil mis à jour.', ok: true },
@@ -16,7 +34,7 @@ const MESSAGES: Record<string, { text: string; ok: boolean }> = {
     ok: true,
   },
   profile_saved_noplan: {
-    text: 'Profil mis à jour. Le plan sera appliqué dès qu’un objectif actif existe (ou régénère-le depuis le cockpit).',
+    text: 'Profil mis à jour. Le plan sera appliqué dès qu’un objectif actif existe (ou régénère-le depuis le dashboard).',
     ok: true,
   },
   email_pending: {
@@ -28,6 +46,34 @@ const MESSAGES: Record<string, { text: string; ok: boolean }> = {
   password_short: { text: 'Mot de passe trop court (8 caractères minimum).', ok: false },
   password_error: { text: 'Impossible de changer le mot de passe : réessaie.', ok: false },
 };
+
+const GARMIN_MESSAGES: Record<string, { text: string; ok: boolean }> = {
+  linked: { text: 'Compte Garmin lié : lance une première synchronisation.', ok: true },
+  unlinked: { text: 'Compte Garmin délié.', ok: true },
+  link_error: {
+    text: 'Login Garmin refusé : vérifie email / mot de passe (et le code MFA si activé).',
+    ok: false,
+  },
+  sync_error: { text: 'Échec de synchronisation : réessaie dans une minute.', ok: false },
+  syncing: { text: 'Synchronisation lancée — récupération des données en cours…', ok: true },
+};
+
+function garminMessage(flag?: string) {
+  if (!flag) return undefined;
+  if (flag.startsWith('synced_')) {
+    const [days, acts] = flag.slice('synced_'.length).split('_');
+    const actsTxt = acts && Number(acts) > 0 ? ` et ${acts} activité(s)` : '';
+    return {
+      text: `Synchronisation terminée : ${days} jour(s) de données${actsTxt} importés.`,
+      ok: true,
+    };
+  }
+  if (flag.startsWith('imported_')) {
+    const n = flag.slice('imported_'.length);
+    return { text: `${n} activité(s) importée(s) avec leur TRIMP réel.`, ok: true };
+  }
+  return GARMIN_MESSAGES[flag];
+}
 
 const INPUT_CLS =
   'w-full rounded-lg border border-white/10 bg-ats-bg2 px-3 py-2 text-sm outline-none placeholder:text-ats-gray focus:border-ats-green/50';
@@ -43,23 +89,35 @@ function Label({ children }: { children: React.ReactNode }) {
 export default async function ProfilePage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; garmin?: string }>;
 }) {
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, sessions_per_week, hr_max, hr_rest, sex')
-    .eq('id', user!.id)
-    .maybeSingle();
 
-  const { status } = await searchParams;
+  const [{ data: profile }, { data: metrics }, garmin] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('full_name, sessions_per_week, hr_max, hr_rest, sex')
+      .eq('id', user!.id)
+      .maybeSingle(),
+    supabase
+      .from('daily_metrics')
+      .select('*')
+      .eq('user_id', user!.id)
+      .order('recorded_date', { ascending: false })
+      .limit(14),
+    getGarminStatus(user!.id),
+  ]);
+
+  const { status, garmin: garminFlag } = await searchParams;
   const msg = status ? MESSAGES[status] : undefined;
+  const gMsg = garminMessage(garminFlag);
+  const today = new Date().toISOString().slice(0, 10);
 
   return (
     <>
       <Nav />
-      <main className="mx-auto max-w-3xl px-6 py-10">
+      <main className="mx-auto max-w-3xl xl:max-w-5xl px-6 py-10">
         <h1 className="text-2xl font-bold">Profil</h1>
         <p className="mt-2 text-sm text-ats-muted">
           Ton identité, tes préférences d&apos;entraînement et tes données.
@@ -160,8 +218,180 @@ export default async function ProfilePage({
           </form>
         </section>
 
+        {/* ------------------------------------------ métriques physiologiques */}
+        <section className="mt-8">
+          <h2 className="text-lg font-bold">Métriques physiologiques</h2>
+          <p className="mt-1 text-sm text-ats-muted">
+            Alimente le moteur de décision : HRV, sommeil, FC repos, automatiquement
+            via Garmin ou à la main.
+          </p>
+
+          {gMsg && (
+            <p
+              className={`mt-4 rounded-xl border px-4 py-2.5 text-sm ${
+                gMsg.ok
+                  ? 'border-ats-green/20 bg-ats-green/5 text-ats-green'
+                  : 'border-ats-red/20 bg-ats-red/5 text-ats-red'
+              }`}
+            >
+              {gMsg.text}
+            </p>
+          )}
+
+          <SyncStatusPoller status={garmin.last_sync?.status} />
+
+          {garmin.last_sync && (
+            <div
+              className={`mt-4 rounded-xl border px-4 py-2.5 text-sm ${
+                garmin.last_sync.status === 'running'
+                  ? 'border-ats-green/20 bg-ats-green/5 text-ats-muted'
+                  : garmin.last_sync.status === 'error'
+                    ? 'border-ats-red/20 bg-ats-red/5 text-ats-red'
+                    : garmin.last_sync.status === 'partial'
+                      ? 'border-ats-orange/20 bg-ats-orange/5 text-ats-orange'
+                      : 'border-ats-green/20 bg-ats-green/5 text-ats-green'
+              }`}
+            >
+              {garmin.last_sync.status === 'running' ? (
+                <span className="inline-flex items-center gap-2">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  Synchronisation en cours… (mise à jour automatique)
+                </span>
+              ) : (
+                <>
+                  Dernière synchro :{' '}
+                  {garmin.last_sync.status === 'success'
+                    ? 'réussie'
+                    : garmin.last_sync.status === 'partial'
+                      ? 'partielle (certaines données manquent)'
+                      : 'échec'}{' '}
+                  · {new Date(garmin.last_sync.created_at).toLocaleString('fr-FR')}
+                  {garmin.last_sync.error && (
+                    <span className="mt-1 block text-[11px] opacity-80">
+                      Détail : {garmin.last_sync.error}
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Garmin */}
+          <section className="card mt-4 p-6">
+            <div className="flex items-center gap-2 text-ats-muted">
+              <Watch className="h-4 w-4" />
+              <span className="text-[11px] font-medium uppercase tracking-[0.2em]">
+                Garmin Connect
+              </span>
+            </div>
+
+            {garmin.linked ? (
+              <div className="mt-4">
+                <p className="text-sm">
+                  <span className="font-medium text-ats-green">✓ Compte lié</span>
+                  <span className="text-ats-muted">
+                    {' '}
+                    : la sync tourne automatiquement chaque matin avant l&apos;ajustement
+                    de séance.
+                  </span>
+                </p>
+                <div className="mt-4 flex flex-wrap items-center gap-4">
+                  <form action={syncGarmin}>
+                    <SubmitButton className="inline-flex items-center gap-2 rounded-xl bg-ats-green px-4 py-2 text-sm font-semibold text-ats-bg transition-transform hover:scale-[1.02] disabled:opacity-60">
+                      <RefreshCw className="h-4 w-4" />
+                      Synchroniser 14 jours
+                    </SubmitButton>
+                  </form>
+                  <form action={importGarminActivities}>
+                    <SubmitButton className="inline-flex items-center gap-2 rounded-xl bg-ats-card2 px-4 py-2 text-sm font-semibold transition-colors hover:bg-ats-gray/40 disabled:opacity-60">
+                      <Download className="h-4 w-4" />
+                      Importer 30 jours d&apos;activités
+                    </SubmitButton>
+                  </form>
+                  <form action={unlinkGarmin}>
+                    <button className="text-xs text-ats-gray hover:text-ats-muted">
+                      Délier le compte
+                    </button>
+                  </form>
+                </div>
+                <p className="mt-3 text-[11px] leading-relaxed text-ats-gray">
+                  La synchronisation récupère métriques quotidiennes, bien-être étendu
+                  (poids, pas, VO2max, Body Battery...) et activités réalisées : chaque
+                  course importée reçoit son TRIMP réel et passe la séance en « Réalisée ».
+                </p>
+              </div>
+            ) : (
+              <GarminLink />
+            )}
+          </section>
+
+          {/* Tendances */}
+          <section className="card mt-4 p-6">
+            <div className="flex items-center gap-2 text-ats-muted">
+              <TrendingUp className="h-4 w-4" />
+              <span className="text-[11px] font-medium uppercase tracking-[0.2em]">
+                Tendances (90 jours)
+              </span>
+            </div>
+            <div className="mt-4">
+              <TrendsChart />
+            </div>
+          </section>
+
+          {/* Saisie manuelle */}
+          <section className="card mt-4 p-6">
+            <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-ats-muted">
+              Saisie manuelle
+            </p>
+            <form action={saveDailyMetrics} className="mt-4 grid gap-3 sm:grid-cols-2">
+              <input name="recorded_date" type="date" defaultValue={today} required className={INPUT_CLS} />
+              <input name="hrv_ms" type="number" step="0.1" min="0" placeholder="HRV (ms)" className={INPUT_CLS} />
+              <input name="sleep_minutes" type="number" min="0" placeholder="Sommeil (minutes)" className={INPUT_CLS} />
+              <input name="resting_heart_rate" type="number" min="0" placeholder="FC repos (bpm)" className={INPUT_CLS} />
+              <button className="rounded-xl bg-ats-card2 py-2 text-sm font-semibold text-ats-text transition-colors hover:bg-ats-gray/40 sm:col-span-2">
+                Enregistrer
+              </button>
+            </form>
+          </section>
+
+          {/* Historique — défile horizontalement sur mobile, avec un dégradé
+              sur le bord droit pour signaler la suite du tableau. */}
+          <div className="relative mt-4">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-ats-card to-transparent sm:hidden"
+            />
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[480px] text-sm">
+              <thead>
+                <tr className="border-b border-white/10 text-left text-ats-muted">
+                  <th className="py-2 font-medium">Date</th>
+                  <th className="font-medium">HRV (ms)</th>
+                  <th className="font-medium">Sommeil</th>
+                  <th className="font-medium">FC repos</th>
+                </tr>
+              </thead>
+              <tbody className="metric">
+                {(metrics ?? []).map((m) => (
+                  <tr key={m.id} className="border-b border-white/5">
+                    <td className="py-2">{m.recorded_date}</td>
+                    <td>{m.hrv_ms ?? '—'}</td>
+                    <td>
+                      {m.sleep_minutes
+                        ? `${Math.floor(m.sleep_minutes / 60)}h${String(m.sleep_minutes % 60).padStart(2, '0')}`
+                        : '—'}
+                    </td>
+                    <td>{m.resting_heart_rate ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            </div>
+          </div>
+        </section>
+
         {/* ------------------------------------------ email */}
-        <section className="card mt-4 p-6">
+        <section className="card mt-8 p-6">
           <div className="flex items-center gap-2">
             <Mail className="h-4 w-4 text-ats-muted" />
             <Label>Adresse email</Label>

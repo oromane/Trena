@@ -252,6 +252,21 @@ class SupabaseRepo:
             },
         )
 
+    def list_sessions_by_discipline(self, user_id: str, discipline: str,
+                                    since: date | None = None,
+                                    limit: int = 50) -> list[dict]:
+        """Séances d'une discipline, les plus récentes d'abord."""
+        params: dict[str, Any] = {
+            "user_id": f"eq.{user_id}",
+            "discipline": f"eq.{discipline}",
+            "select": "*",
+            "order": "scheduled_date.desc",
+            "limit": str(limit),
+        }
+        if since is not None:
+            params["scheduled_date"] = f"gte.{since.isoformat()}"
+        return self._get("/training_sessions", params)
+
     def update_session(self, session_id: str, fields: dict) -> dict | None:
         rows = self._patch("/training_sessions", {"id": f"eq.{session_id}"}, fields)
         return rows[0] if rows else None

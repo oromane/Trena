@@ -65,43 +65,6 @@ def test_ingest_upserts_metrics(client, repo):
 
 
 # --------------------------------------------------------------------- plan
-def test_plan_generate_persists(client, repo):
-    today = date.today()
-    repo.get_profile.return_value = {
-        "id": "u1", "weekly_availability_mask": [60, 60, 60, 60, 60, 120, 90],
-    }
-    repo.get_active_objectives.return_value = [{
-        "id": "obj1",
-        "target_date": (today + timedelta(weeks=10)).isoformat(),
-    }]
-    r = client.post("/plan/generate", headers=HEADERS,
-                    json={"user_id": "u1", "persist": True})
-    assert r.status_code == 200
-    body = r.json()
-    assert body["n_sessions"] > 0
-    assert body["persisted"] is True
-    repo.delete_planned_sessions.assert_called_once()
-    repo.insert_sessions.assert_called_once()
-
-
-def test_plan_generate_chains_multiple_objectives(client, repo):
-    today = date.today()
-    repo.get_profile.return_value = {
-        "id": "u1", "weekly_availability_mask": [60, 60, 60, 60, 60, 120, 90],
-    }
-    repo.get_active_objectives.return_value = [
-        {"id": "obj1", "target_date": (today + timedelta(weeks=8)).isoformat()},
-        {"id": "obj2", "target_date": (today + timedelta(weeks=20)).isoformat()},
-    ]
-    r = client.post("/plan/generate", headers=HEADERS,
-                    json={"user_id": "u1", "persist": True})
-    assert r.status_code == 200
-    assert r.json()["n_sessions"] > 0
-    # Les séances sont rattachées aux deux courses de la saison.
-    rows = repo.insert_sessions.call_args[0][0]
-    assert {row["objective_id"] for row in rows} == {"obj1", "obj2"}
-
-
 def test_plan_requires_active_objective(client, repo):
     repo.get_profile.return_value = {"id": "u1", "weekly_availability_mask": [60] * 7}
     repo.get_active_objectives.return_value = []
@@ -121,62 +84,4 @@ def _metrics_rows(day: date, hrv_today: float, sleep_today: int) -> list[dict]:
     return rows
 
 
-def test_daily_adjust_reduces_on_bad_hrv_and_sleep(client, repo):
-    day = date.today()
-    repo.get_session_for_date.return_value = {
-        "id": "s1", "session_type": "INTERVAL",
-        "duration_planned_minutes": 60, "intensity_target_trimp": 120,
-        "calendar_event_id": None,
-    }
-    repo.get_metrics_history.return_value = _metrics_rows(day, hrv_today=40.0,
-                                                          sleep_today=300)
-    r = client.post("/daily-adjust/run", headers=HEADERS, json={"user_id": "u1"})
-    assert r.status_code == 200
-    body = r.json()
-    assert body["readiness"] == "REDUCE"
-    assert body["modified"] is True
-    assert body["session_type"] == "ENDURANCE"
-    repo.update_session.assert_called_once()
-
-
-def test_daily_adjust_keeps_plan_when_normal(client, repo):
-    day = date.today()
-    repo.get_session_for_date.return_value = {
-        "id": "s1", "session_type": "TEMPO",
-        "duration_planned_minutes": 50, "intensity_target_trimp": 100,
-        "calendar_event_id": None,
-    }
-    repo.get_metrics_history.return_value = _metrics_rows(day, hrv_today=61.0,
-                                                          sleep_today=450)
-    r = client.post("/daily-adjust/run", headers=HEADERS, json={"user_id": "u1"})
-    body = r.json()
-    assert body["readiness"] == "NORMAL"
-    assert body["modified"] is False
-    repo.update_session.assert_not_called()
-
-
-def test_daily_adjust_no_session(client, repo):
-    repo.get_session_for_date.return_value = None
-    r = client.post("/daily-adjust/run", headers=HEADERS, json={"user_id": "u1"})
-    assert r.status_code == 200
-    assert "Aucune séance" in r.json()["detail"]
-
-
-def test_daily_adjust_insufficient_data_keeps_plan(client, repo):
-    repo.get_session_for_date.return_value = {
-        "id": "s1", "session_type": "INTERVAL",
-        "duration_planned_minutes": 60, "intensity_target_trimp": 120,
-        "calendar_event_id": None,
-    }
-    repo.get_metrics_history.return_value = []  # aucune donnée
-    r = client.post("/daily-adjust/run", headers=HEADERS, json={"user_id": "u1"})
-    body = r.json()
-    assert body["modified"] is False
-    assert "insuffisantes" in body["detail"]
-
-
 # ------------------------------------------------------------- users/active
-def test_active_users(client, repo):
-    repo.list_active_user_ids.return_value = ["u1", "u2"]
-    r = client.get("/users/active", headers=HEADERS)
-    assert r.json() == {"user_ids": ["u1", "u2"]}

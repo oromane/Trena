@@ -99,7 +99,7 @@ export default function LoginPage() {
           </h2>
           <p className="mt-1 text-sm text-ats-muted">
             {mode === 'signin'
-              ? 'Accédez à votre cockpit d’entraînement.'
+              ? 'Accédez à votre dashboard d’entraînement.'
               : 'Rejoignez la bêta ouverte aux athlètes analytiques.'}
           </p>
 

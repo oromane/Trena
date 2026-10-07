@@ -399,6 +399,42 @@ RUNNING_TYPES = {
     "treadmill_running", "street_running", "indoor_running",
 }
 
+CYCLING_TYPES = {
+    "cycling", "road_biking", "mountain_biking", "gravel_cycling",
+    "indoor_cycling", "virtual_ride", "cyclocross", "downhill_biking",
+    "recumbent_cycling", "track_cycling", "bmx",
+    "e_bike_fitness", "e_bike_mountain",
+}
+
+SWIMMING_TYPES = {"lap_swimming", "open_water_swimming", "swimming"}
+
+STRENGTH_TYPES = {"strength_training", "indoor_cardio"}
+
+MULTISPORT_TYPES = {"multi_sport", "triathlon"}
+
+# Couple (discipline, session_type) par défaut à l'import.
+#
+# Les deux colonnes sont contraintes en base : `discipline` est un ENUM
+# (RUN, STRENGTH, BIKE, SWIM, TRIATHLON) et une contrainte CHECK restreint
+# `session_type` selon la discipline. Les valeurs ci-dessous sont les seules
+# acceptées pour chaque couple ; toute autre combinaison est rejetée en 23514.
+DISCIPLINE_BY_TYPE: dict[str, tuple[str, str]] = {
+    **{t: ("RUN", "ENDURANCE") for t in RUNNING_TYPES},
+    **{t: ("BIKE", "ENDURANCE") for t in CYCLING_TYPES},
+    **{t: ("SWIM", "ENDURANCE") for t in SWIMMING_TYPES},
+    **{t: ("STRENGTH", "FULL_BODY") for t in STRENGTH_TYPES},
+    **{t: ("TRIATHLON", "BRICK") for t in MULTISPORT_TYPES},
+}
+
+
+def classify_activity(type_key: str) -> tuple[str, str] | None:
+    """Discipline et type de séance pour un `activityType.typeKey` Garmin.
+
+    Renvoie None pour les activités hors périmètre (marche, yoga, ski…) :
+    elles sont ignorées plutôt que rangées dans une discipline approximative.
+    """
+    return DISCIPLINE_BY_TYPE.get((type_key or "").lower())
+
 
 def _pace_s_per_km(speed_m_s) -> int | None:
     """Allure (s/km) depuis une vitesse (m/s)."""
@@ -479,11 +515,13 @@ def import_activities(repo, client: GarminClient, user_id: str,
     MAX_DETAIL_CALLS = 30
     detail_calls = 0
 
-    imported = matched = created = skipped = 0
+    imported = created = skipped = 0
     for a in activities:
         type_key = ((a.get("activityType") or {}).get("typeKey") or "").lower()
-        if type_key not in RUNNING_TYPES:
+        classified = classify_activity(type_key)
+        if classified is None:
             continue
+        discipline, session_type = classified
         activity_id = str(a.get("activityId") or "")
         if not activity_id:
             continue
@@ -523,25 +561,23 @@ def import_activities(repo, client: GarminClient, user_id: str,
             "activity_metrics": metrics or None,
         }
 
-        planned = repo.get_session_for_date(user_id, date.fromisoformat(day_str))
-        if planned is not None and planned.get("status") in ("PLANNED", "MODIFIED"):
-            repo.update_session(planned["id"], actuals)
-            matched += 1
-        else:
-            repo.insert_sessions([{
-                "user_id": user_id,
-                "scheduled_date": day_str,
-                "session_type": "ENDURANCE",
-                "title": a.get("activityName"),
-                "duration_planned_minutes": duration_min,
-                "intensity_target_trimp": trimp_val,
-                **actuals,
-            }])
-            created += 1
+        # Chaque activité est créée dans sa propre discipline : c'est ce qui
+        # alimente les totaux par sport et les tuiles du dashboard.
+        repo.insert_sessions([{
+            "user_id": user_id,
+            "scheduled_date": day_str,
+            "discipline": discipline,
+            "session_type": session_type,
+            "title": a.get("activityName"),
+            "duration_planned_minutes": duration_min,
+            "intensity_target_trimp": trimp_val,
+            **actuals,
+        }])
+        created += 1
         imported += 1
 
     return {"activities_found": len(activities), "imported": imported,
-            "matched": matched, "created": created,
+            "created": created,
             "already_imported": skipped, "detail_calls": detail_calls}
 
 

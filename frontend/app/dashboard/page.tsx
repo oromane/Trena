@@ -1,28 +1,22 @@
+/**
+ * Dashboard — données Garmin.
+ *
+ * Le site ne planifie ni n'enregistre de séance. Tout ce qui s'affiche ici
+ * provient de la synchronisation de la montre : métriques physiologiques
+ * quotidiennes et activités importées, agrégées toutes disciplines.
+ */
+import Link from 'next/link';
+import { ArrowRight, BookOpen } from 'lucide-react';
 import Nav from '@/components/Nav';
 import Footer from '@/components/Footer';
-import Hero from '@/components/dashboard/Hero';
+import HomeHero from '@/components/home/HomeHero';
+import TotalsPanel from '@/components/home/TotalsPanel';
+import DisciplineTiles from '@/components/home/DisciplineTiles';
+import ActivityFeed from '@/components/home/ActivityFeed';
 import PhysioGrid from '@/components/dashboard/PhysioGrid';
-import SessionCard from '@/components/dashboard/SessionCard';
-import ObjectiveCard from '@/components/dashboard/ObjectiveCard';
-import ProbabilityCard from '@/components/dashboard/ProbabilityCard';
-import TrajectoryChart from '@/components/dashboard/TrajectoryChart';
-import CalendarView from '@/components/dashboard/CalendarView';
-import LoadChart from '@/components/dashboard/LoadChart';
-import HistoryTimeline from '@/components/dashboard/HistoryTimeline';
-import InsightsCard from '@/components/dashboard/InsightsCard';
-import RaceWeekCard from '@/components/dashboard/RaceWeekCard';
-import OnboardingCard from '@/components/dashboard/OnboardingCard';
-import InfoTooltip from '@/components/InfoTooltip';
-import Link from 'next/link';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { ensureProfile } from '@/app/actions';
-import {
-  getCalendarStatus,
-  getDashboardSummary,
-  getGarminStatus,
-  getWorkoutLibrary,
-  getWorkoutTemplates,
-} from '@/lib/engine';
+import { getDashboardOverview, getGarminStatus } from '@/lib/engine';
 
 function freshnessLabel(dateStr: string, today: string): string {
   const diff = Math.round(
@@ -33,69 +27,16 @@ function freshnessLabel(dateStr: string, today: string): string {
   return `il y a ${diff} jours`;
 }
 
-const CALENDAR_MESSAGES: Record<string, { text: string; ok: boolean }> = {
-  linked: { text: 'Google Calendar lié avec succès.', ok: true },
-  denied: { text: 'Autorisation refusée côté Google.', ok: false },
-  state_error: { text: 'Session OAuth expirée : réessaie.', ok: false },
-  exchange_error: { text: "Échec de l'échange de tokens : réessaie.", ok: false },
-  config_error: { text: 'Google OAuth non configuré côté serveur.', ok: false },
-  publish_error: {
-    text: "Échec de la publication : vérifie que l'API Google Calendar est activée.",
-    ok: false,
-  },
-  purge_error: { text: 'Échec du nettoyage du calendrier : réessaie.', ok: false },
-};
-
-function calendarMessage(flag?: string) {
-  if (!flag) return undefined;
-  if (flag.startsWith('published_')) {
-    const n = flag.slice('published_'.length);
-    return { text: `${n} séance(s) publiée(s) dans ton calendrier.`, ok: true };
-  }
-  if (flag.startsWith('purged_')) {
-    const n = flag.slice('purged_'.length);
-    return {
-      text: `Calendrier nettoyé : ${n} événement(s) Trena supprimé(s). Tu peux republier le plan proprement.`,
-      ok: true,
-    };
-  }
-  return CALENDAR_MESSAGES[flag];
-}
-
-function SectionLabel({
-  children,
-  info,
-}: {
-  children: React.ReactNode;
-  info?: React.ReactNode;
-}) {
-  return (
-    <h2 className="mb-3 flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.25em] text-ats-gray">
-      {children}
-      {info}
-    </h2>
-  );
-}
-
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ calendar?: string }>;
-}) {
+export default async function DashboardPage() {
   await ensureProfile();
   const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  const { calendar: calendarFlag } = await searchParams;
-  const calendarMsg = calendarMessage(calendarFlag);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const [summary, calStatus, { data: profile }] = await Promise.all([
-    getDashboardSummary(user!.id),
-    getCalendarStatus(user!.id),
+  const [overview, { data: profile }, garmin] = await Promise.all([
+    getDashboardOverview(user!.id),
     supabase.from('profiles').select('full_name').eq('id', user!.id).maybeSingle(),
-  ]);
-  const [templates, library, garminStatus] = await Promise.all([
-    getWorkoutTemplates(),
-    getWorkoutLibrary(user!.id),
     getGarminStatus(user!.id),
   ]);
 
@@ -103,25 +44,15 @@ export default async function DashboardPage({
   const fallback = rawName.charAt(0).toUpperCase() + rawName.slice(1).split('.')[0];
   const name = profile?.full_name?.split(' ')[0] || fallback;
 
-  const hasObjective = !!summary?.objective;
-  const garminLinked = garminStatus.linked;
-  const weekSessions = summary?.week.flatMap((d) => d.sessions) ?? [];
-  const weekPlanned = weekSessions.length;
-  const weekDone = weekSessions.filter((s) => s.status === 'COMPLETED').length;
-  const hasSessions = !!summary
-    && (summary.history.length > 0
-      || summary.week.some((d) => d.sessions.length > 0)
-      || !!summary.today_session);
-
-  if (!summary) {
+  if (!overview) {
     return (
       <>
         <Nav />
-        <main className="mx-auto max-w-6xl px-6 py-16">
+        <main className="mx-auto max-w-6xl px-6 py-16 2xl:max-w-[88rem]">
           <h1 className="text-2xl font-bold">Bonjour {name}</h1>
           <div className="card mt-6 p-6 text-sm text-ats-muted">
-            Le moteur de performance est momentanément injoignable. Recharge la page
-            dans quelques secondes : tes données sont intactes.
+            Le moteur est momentanément injoignable. Recharge la page dans
+            quelques secondes : tes données sont intactes.
           </div>
         </main>
         <Footer />
@@ -133,181 +64,55 @@ export default async function DashboardPage({
     <>
       <Nav />
       <main className="pb-4">
-        {calendarMsg && (
-          <div className="mx-auto max-w-6xl px-6 pt-4">
-            <p
-              className={`rounded-xl border px-4 py-2.5 text-sm ${
-                calendarMsg.ok
-                  ? 'border-ats-green/20 bg-ats-green/5 text-ats-green'
-                  : 'border-ats-red/20 bg-ats-red/5 text-ats-red'
-              }`}
-            >
-              {calendarMsg.text}
-            </p>
-          </div>
-        )}
+        <HomeHero name={name} data={overview} garminLinked={garmin.linked} />
 
-        {/* HERO */}
-        <Hero
-          name={name}
-          objectiveTitle={summary.objective?.title ?? null}
-          daysRemaining={summary.objective?.days_remaining ?? null}
-          probability={summary.probability.value}
-          readiness={summary.readiness.level}
-          readinessDetail={summary.readiness.detail}
-        />
-
-        <div className="mx-auto max-w-6xl space-y-12 px-6">
-          {/* AMORÇAGE (affiché seulement si incomplet) */}
-          {(!hasObjective || !garminLinked || !hasSessions) && (
-            <section>
-              <OnboardingCard
-                hasObjective={hasObjective}
-                garminLinked={garminLinked}
-                hasSessions={hasSessions}
-              />
-            </section>
-          )}
-
-          {/* MODE COURSE (J-7 → J-0) */}
-          {summary.race_week && (
-            <section>
-              <SectionLabel>Semaine de course</SectionLabel>
-              <RaceWeekCard race={summary.race_week} />
-            </section>
-          )}
-
-          {/* DÉCISION DU JOUR (juste sous le hero) */}
-          <section className="grid gap-4 lg:grid-cols-5">
-            <div className="lg:col-span-3">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h2 className="text-[11px] font-medium uppercase tracking-[0.25em] text-ats-gray">
-                  Séance recommandée
-                </h2>
-                {weekPlanned > 0 && (
-                  <span className="metric text-[11px] text-ats-muted">
-                    Cette semaine :{' '}
-                    <span className={weekDone >= weekPlanned ? 'text-ats-green' : 'text-ats-text'}>
-                      {weekDone}/{weekPlanned}
-                    </span>{' '}
-                    séances
-                  </span>
-                )}
-              </div>
-              <SessionCard
-                session={summary.today_session}
-                workout={summary.workout}
-                readiness={summary.readiness}
-                gainPct={summary.probability.gain_if_completed_pct}
-              />
-            </div>
-            <div className="lg:col-span-2">
-              <SectionLabel>Objectif</SectionLabel>
-              <ObjectiveCard
-                objective={summary.objective}
-                weeklyLoad={summary.weekly_load}
-                today={summary.date}
-              />
-            </div>
-          </section>
-
-          {/* ÉTAT PHYSIOLOGIQUE */}
+        <div className="mx-auto max-w-6xl space-y-12 px-4 py-10 sm:px-6 2xl:max-w-[88rem]">
+          {/* ------------------------------------------ état physiologique */}
           <section>
-            <SectionLabel>État physiologique</SectionLabel>
-            {summary.last_metric_date && (
-              <p className="-mt-2 mb-3 text-[11px] text-ats-gray">
-                Dernières données : {freshnessLabel(summary.last_metric_date, summary.date)}
-                {summary.physio.hrv?.today == null && (
+            <h2 className="mb-3 text-[11px] font-medium uppercase tracking-[0.25em] text-ats-gray">
+              État physiologique
+            </h2>
+            {overview.last_metric_date && (
+              <p className="-mt-1 mb-3 text-[11px] text-ats-gray">
+                Dernières données :{' '}
+                {freshnessLabel(overview.last_metric_date, overview.date)}
+                {overview.physio.hrv?.today == null && (
                   <>
                     {' · '}
-                    <Link href="/metrics" className="text-ats-green hover:underline">
+                    <Link href="/profile" className="text-ats-green hover:underline">
                       synchroniser Garmin
                     </Link>
                   </>
                 )}
               </p>
             )}
-            <PhysioGrid physio={summary.physio} />
+            <PhysioGrid physio={overview.physio} />
           </section>
 
-          {/* TRAJECTOIRE + PROBABILITÉ */}
-          <section className="grid gap-4 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <SectionLabel
-                info={
-                  <InfoTooltip title="Modèle de Banister">
-                    Modèle Fitness-Fatigue : chaque séance ajoute de l&apos;aptitude
-                    (décroissance lente, ~42 j) et de la fatigue (décroissance rapide,
-                    ~7 j). La Forme = aptitude − fatigue, prédit ta capacité à
-                    performer. Trena projette ces 3 courbes jusqu&apos;au jour J.
-                  </InfoTooltip>
-                }
-              >
-                Trajectoire · modèle de Banister
-              </SectionLabel>
-              <div className="card p-5">
-                <TrajectoryChart
-                  trajectory={summary.trajectory}
-                  targetDate={summary.objective?.target_date ?? null}
-                />
-              </div>
-            </div>
-            <div>
-              <SectionLabel
-                info={
-                  <InfoTooltip title="Probabilité de réussite">
-                    Estimation déterministe de tes chances d&apos;atteindre ton chrono
-                    cible : adhérence au plan (50 %) + fraîcheur Banister (30 %) +
-                    disponibilité du jour (20 %).
-                  </InfoTooltip>
-                }
-              >
-                Probabilité
-              </SectionLabel>
-              <ProbabilityCard probability={summary.probability} />
-            </div>
-          </section>
+          <TotalsPanel data={overview} />
 
-          {/* CALENDRIER */}
-          <section id="calendrier" className="scroll-mt-20">
-            <SectionLabel>Calendrier</SectionLabel>
-            <div className="card p-5">
-              <CalendarView
-                calendarLinked={calStatus.linked}
-                templates={templates}
-                library={library}
-              />
-            </div>
-          </section>
+          <DisciplineTiles data={overview} />
 
-          {/* CHARGE + ANALYSE */}
-          <section className="grid gap-4 lg:grid-cols-2">
-            <div>
-              <SectionLabel>Charge hebdomadaire</SectionLabel>
-              <div className="card p-5">
-                <LoadChart weeklyLoad={summary.weekly_load} />
-              </div>
-            </div>
-            <div>
-              <SectionLabel
-                info={
-                  <InfoTooltip title="Analyse">
-                    Insights déterministes : chaque conclusion (tendance HRV,
-                    monotonie de Foster, adhérence) est calculée directement à partir
-                    de tes données, sans boîte noire ni modèle opaque.
-                  </InfoTooltip>
-                }
-              >
-                Analyse
-              </SectionLabel>
-              <InsightsCard insights={summary.insights} />
-            </div>
-          </section>
+          <ActivityFeed data={overview} />
 
-          {/* HISTORIQUE */}
+          {/* ------------------------------------------ passerelle guide */}
           <section>
-            <SectionLabel>Progression</SectionLabel>
-            <HistoryTimeline history={summary.history} today={summary.date} />
+            <Link
+              href="/guide"
+              className="card group flex items-center justify-between gap-4 p-5 transition-colors hover:bg-ats-card2"
+            >
+              <div>
+                <p className="flex items-center gap-2 font-semibold text-ats-text">
+                  <BookOpen className="h-4 w-4 text-ats-green" />
+                  Comprendre ton entraînement
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-ats-muted">
+                  Le guide : répétitions, séries, repos, zones d&apos;endurance,
+                  nutrition et cycle menstruel — chaque affirmation sourcée.
+                </p>
+              </div>
+              <ArrowRight className="h-4 w-4 shrink-0 text-ats-gray transition-transform group-hover:translate-x-0.5 group-hover:text-ats-green" />
+            </Link>
           </section>
         </div>
       </main>

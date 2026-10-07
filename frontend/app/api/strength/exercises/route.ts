@@ -6,11 +6,13 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const muscle = searchParams.get('muscle')
+    const id = searchParams.get('id')
     const limit = searchParams.get('limit') || '100'
     const offset = searchParams.get('offset') || '0'
 
     let url = `${BACKEND_URL}/strength/exercises?limit=${limit}&offset=${offset}`
     if (muscle) url += `&muscle=${muscle}`
+    if (id) url += `&id=${id}`
 
     const response = await fetch(url, {
       method: 'GET',

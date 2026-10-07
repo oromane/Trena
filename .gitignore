@@ -8,3 +8,10 @@ __pycache__/
 .venv/
 dist/
 bin/
+
+# Local env and build artifacts
+.env.local
+*.env.local
+*.tsbuildinfo
+.fuse_hidden*
+venv/

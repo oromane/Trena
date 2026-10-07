@@ -1,72 +1,84 @@
-"""Tests du module Strength."""
+"""Tests du catalogue d'exercices.
+
+Le module musculation est en consultation seule : il ne reste que la lecture
+du catalogue. Les anciens tests de création de séance, de logging RIR et de
+readiness ont disparu avec leurs endpoints.
+"""
+from unittest.mock import MagicMock, patch
+
 import pytest
 from fastapi.testclient import TestClient
+
+from app.config import settings
 from app.main import app
-from uuid import uuid4
 
-client = TestClient(app)
-
-# Fixtures
-VALID_USER_ID = "8acfeb20-af7f-4f96-99a5-63d65142486e"
-VALID_EXERCISE_ID = "84156295-a11d-493d-9e46-fdfc2afbaf2c"
+KEY = "test-internal-key"
+HEADERS = {"X-Internal-Key": KEY}
 
 
-@pytest.mark.skip(reason="Requires Supabase connection")
-def test_list_exercises():
-    """GET /exercises retourne la liste des exercices."""
-    response = client.get("/strength/exercises?muscle=chest&limit=2")
-    assert response.status_code == 200
-    data = response.json()
-    assert isinstance(data, list)
-    assert len(data) > 0
-    assert "id" in data[0]
-    assert "name" in data[0]
+@pytest.fixture(autouse=True)
+def configure_security(monkeypatch):
+    monkeypatch.setattr(settings, "internal_api_key", KEY)
+    monkeypatch.setattr(settings, "supabase_url", "https://example.supabase.co")
+    monkeypatch.setattr(settings, "supabase_service_role_key", "test-key")
 
 
-@pytest.mark.skip(reason="Requires Supabase connection")
-def test_create_session():
-    """POST /sessions crée une séance avec prescriptions."""
-    payload = {
-        "user_id": VALID_USER_ID,
-        "session_date": "2026-08-03",
-        "prescriptions": [
-            {
-                "exercise_id": VALID_EXERCISE_ID,
-                "exercise_order": 1,
-                "sets_planned": 3,
-                "reps_min": 6,
-                "reps_max": 10,
-                "target_rir": 2,
-                "load_planned_kg": 100,
-                "rest_seconds": 120,
-            }
-        ],
-    }
-    response = client.post("/strength/sessions", json=payload)
-    assert response.status_code == 200
-    data = response.json()
-    assert "session_id" in data
-    assert data["prescriptions_count"] == 1
+@pytest.fixture
+def client():
+    return TestClient(app)
 
 
-@pytest.mark.skip(reason="Requires Supabase connection")
-def test_get_session():
-    """GET /sessions/{id} retourne une séance."""
-    # Supposant qu'une séance existe
-    session_id = "48cf7dd4-0275-4826-8493-8e06455d8c51"
-    response = client.get(f"/strength/sessions/{session_id}?user_id={VALID_USER_ID}")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["session_id"] == session_id
-    assert "prescriptions" in data
+def _mock_response(payload, status=200):
+    r = MagicMock()
+    r.status_code = status
+    r.json.return_value = payload
+    return r
 
 
-@pytest.mark.skip(reason="Requires Supabase connection")
-def test_readiness():
-    """GET /readiness retourne le statut de récupération."""
-    response = client.get(f"/strength/readiness?user_id={VALID_USER_ID}")
-    assert response.status_code == 200
-    data = response.json()
-    assert "user_id" in data
-    assert "recovery_status" in data
-    assert data["recovery_status"] in ["green", "yellow", "red"]
+def test_catalogue_requires_internal_key(client):
+    r = client.get("/strength/exercises", headers={"X-Internal-Key": "wrong"})
+    assert r.status_code == 401
+
+
+@patch("app.routers.strength.httpx.AsyncClient")
+def test_list_exercises_returns_catalogue(mock_client, client, monkeypatch):
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-key")
+
+    payload = [
+        {
+            "id": "e1",
+            "name": "Dumbbell Biceps Curl",
+            "slug": "dumbbell-biceps-curl",
+            "muscle_primary": "arms",
+            "muscles_secondary": ["forearms"],
+            "equipment": ["dumbbell"],
+            "image_url": "https://example.com/curl.jpg",
+            "video_url": None,
+            "instructions": "…",
+            "instructions_steps": ["Dos droit", "Coudes fixes"],
+        }
+    ]
+    instance = mock_client.return_value.__aenter__.return_value
+    instance.get.return_value = _mock_response(payload)
+
+    r = client.get("/strength/exercises?muscle=arms&limit=1", headers=HEADERS)
+    assert r.status_code == 200
+    body = r.json()
+    assert len(body) == 1
+    assert body[0]["name"] == "Dumbbell Biceps Curl"
+    # Les repères d'exécution alimentent la fiche dépliable du catalogue.
+    assert body[0]["instructions_steps"] == ["Dos droit", "Coudes fixes"]
+
+
+@patch("app.routers.strength.httpx.AsyncClient")
+def test_muscle_filter_is_forwarded(mock_client, client, monkeypatch):
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-key")
+
+    instance = mock_client.return_value.__aenter__.return_value
+    instance.get.return_value = _mock_response([])
+
+    client.get("/strength/exercises?muscle=chest", headers=HEADERS)
+    called_url = instance.get.call_args[0][0]
+    assert "muscle_primary=eq.chest" in called_url

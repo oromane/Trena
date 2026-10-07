@@ -27,7 +27,7 @@ export default function ThemeToggle() {
     <button
       onClick={toggle}
       aria-label={light ? 'Passer en thème sombre' : 'Passer en thème clair'}
-      className="rounded-lg p-1.5 text-ats-muted transition-colors hover:bg-ats-card2 hover:text-ats-text"
+      className="flex h-9 w-9 items-center justify-center rounded-lg text-ats-muted transition-colors hover:bg-ats-card2 hover:text-ats-text"
     >
       {light ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
     </button>

@@ -33,13 +33,6 @@ export async function getGarminStatus(userId: string): Promise<GarminStatus> {
   }
 }
 
-export interface SimulateResult {
-  fitness: number[];
-  fatigue: number[];
-  performance: number[];
-  form: number[];
-}
-
 const INTERNAL_KEY = process.env.INTERNAL_API_KEY ?? '';
 
 // ---------------------------------------------------------------- summary
@@ -49,151 +42,77 @@ export interface MetricBlock {
   delta_pct: number | null;
 }
 
-export interface WeekDay {
+// ---------------------------------------------------------------- overview
+export type DisciplineAccent = 'green' | 'blue' | 'violet' | 'orange' | 'gray';
+
+export interface DisciplineTotals {
+  sessions: number;
+  minutes: number;
+  distance_m: number;
+  trimp: number;
+  tonnage_kg: number;
+}
+
+export interface DisciplineTile extends DisciplineTotals {
+  discipline: string;
+  label: string;
+  icon: string;
+  accent: DisciplineAccent;
+}
+
+export interface FeedEntry {
+  id: string;
+  date: string;
+  discipline: string;
+  discipline_label: string;
+  icon: string;
+  accent: DisciplineAccent;
+  session_type: string | null;
+  title: string | null;
+  duration_minutes: number | null;
+  distance_m: number | null;
+  trimp: number | null;
+  tonnage_kg: number | null;
+  avg_hr: number | null;
+  rpe: number | null;
+}
+
+export interface OverviewWeekDay {
   date: string;
   is_today: boolean;
-  sessions: {
-    id: string;
-    session_type: string;
-    duration_minutes: number;
-    target_trimp: number;
-    status: string;
-  }[];
+  is_past: boolean;
+  planned: number;
+  completed: number;
+  disciplines: string[];
 }
 
-export interface SessionComparison {
-  actual_pace_s_per_km?: number;
-  actual_pace?: string;
-  target_pace_s_per_km?: number;
-  target_pace?: string;
-  pace_delta_s?: number;
-  target_trimp?: number;
-  actual_trimp?: number;
-  trimp_delta?: number;
-  avg_hr?: number;
-}
-
-export interface ActivityMetrics {
-  distance_m?: number;
-  duration_s?: number;
-  moving_duration_s?: number;
-  elapsed_duration_s?: number;
-  avg_pace_s_per_km?: number;
-  best_pace_s_per_km?: number;
-  elevation_gain_m?: number;
-  elevation_loss_m?: number;
-  calories?: number;
-  avg_hr?: number;
-  max_hr?: number;
-  hr_time_in_zone_s?: number[];
-  avg_cadence_spm?: number;
-  max_cadence_spm?: number;
-  avg_stride_length_cm?: number;
-  training_effect_aerobic?: number;
-  training_effect_anaerobic?: number;
-  min_temperature_c?: number;
-  max_temperature_c?: number;
-  start_elevation_m?: number;
-  vo2max?: number;
-}
-
-export interface SessionRow {
-  id: string;
-  scheduled_date: string;
-  scheduled_time: string | null;
-  session_type: string;
-  duration_planned_minutes: number;
-  intensity_target_trimp: number;
-  status: string;
-  duration_actual_minutes: number | null;
-  trimp_actual: number | null;
-  distance_m?: number | null;
-  avg_hr?: number | null;
-  comparison?: SessionComparison | null;
-  activity_metrics?: ActivityMetrics | null;
-}
-
-export interface ZonePace {
-  zone: number;
-  label: string;
-  pace_s_per_km: number;
-  pace: string;
-}
-
-export interface PacesPayload {
-  distance_m: number;
-  race: { pace_s_per_km: number; pace: string };
-  zones: ZonePace[];
-}
-
-export interface Workout {
-  blocks: { label: string; detail: string }[];
-  focus: string;
-  pace_hint?: string;
-  paces?: PacesPayload;
-}
-
-export interface RaceWeek {
-  days_remaining: number;
-  title: string;
-  target_date: string;
-  race_pace: { pace_s_per_km: number; pace: string } | null;
-  checklist: { days_before: number; label: string; done_window: boolean }[];
-  reminders: { nutrition: string; sommeil: string; hydratation: string };
-}
-
-export interface DashboardSummary {
+export interface DashboardOverview {
   date: string;
-  objective: {
-    title: string;
-    sport_type: string;
-    target_date: string;
-    target_time_seconds: number | null;
-    days_remaining: number;
-  } | null;
-  paces?: PacesPayload | null;
-  race_week?: RaceWeek | null;
-  readiness: { level: 'NORMAL' | 'CAUTION' | 'REDUCE'; hrv_zscore: number | null; detail: string };
-  today_session: SessionRow | null;
-  workout: Workout | null;
-  last_metric_date?: string | null;
+  readiness: {
+    level: 'NORMAL' | 'CAUTION' | 'REDUCE';
+    hrv_zscore: number | null;
+    detail: string;
+  };
   physio: {
     hrv: MetricBlock | null;
     sleep: MetricBlock | null;
     resting_hr: MetricBlock | null;
     stress: MetricBlock | null;
   };
-  probability: {
-    value: number;
-    adherence: number;
-    form_score: number;
-    readiness_factor: number;
-    explanation: string[];
-    gain_if_completed_pct: number;
-  };
-  trajectory: {
-    start_date: string;
-    today_index: number;
-    fitness: number[];
-    fatigue: number[];
-    form: number[];
-    loads: number[];
-  };
-  weekly_load: {
-    week_start: string;
-    planned_trimp: number;
-    actual_trimp: number;
-    planned_minutes: number;
-    actual_minutes: number;
-  }[];
-  week: WeekDay[];
-  history: SessionRow[];
-  insights: { kind: string; severity: 'positive' | 'info' | 'warning'; text: string }[];
+  last_metric_date: string | null;
+  totals: { week: DisciplineTotals; month: DisciplineTotals };
+  by_discipline: DisciplineTile[];
+  week: OverviewWeekDay[];
+  recent: FeedEntry[];
+  streak_weeks: number;
+  active_days_28: number;
 }
 
-export async function getDashboardSummary(userId: string): Promise<DashboardSummary | null> {
+export async function getDashboardOverview(
+  userId: string
+): Promise<DashboardOverview | null> {
   try {
-    const res = await fetch(`${ENGINE_URL}/dashboard/summary`, {
+    const res = await fetch(`${ENGINE_URL}/dashboard/overview`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Internal-Key': INTERNAL_KEY },
       body: JSON.stringify({ user_id: userId }),
@@ -206,82 +125,9 @@ export async function getDashboardSummary(userId: string): Promise<DashboardSumm
   }
 }
 
-export interface WorkoutTemplate {
-  id: string;
-  name: string;
-  session_type: string;
-  description: string;
-  params: { key: string; label: string; default: number; min: number; max: number }[];
-}
-
 /** Bibliothèque de séances structurées (modèles paramétrables). */
-export async function getWorkoutTemplates(): Promise<WorkoutTemplate[]> {
-  try {
-    const res = await fetch(`${ENGINE_URL}/sessions/templates`, {
-      headers: { 'X-Internal-Key': INTERNAL_KEY },
-      cache: 'no-store',
-    });
-    if (!res.ok) return [];
-    return (await res.json()).templates ?? [];
-  } catch {
-    return [];
-  }
-}
-
-export interface LibraryItem {
-  id: string;
-  title: string;
-  session_type: string;
-  duration_minutes: number;
-  target_trimp: number;
-  structure: Workout;
-  created_at: string;
-}
 
 /** Bibliothèque de séances de test de l'utilisateur (isolée du moteur). */
-export async function getWorkoutLibrary(userId: string): Promise<LibraryItem[]> {
-  try {
-    const res = await fetch(
-      `${ENGINE_URL}/sessions/library?user_id=${encodeURIComponent(userId)}`,
-      { headers: { 'X-Internal-Key': INTERNAL_KEY }, cache: 'no-store' }
-    );
-    if (!res.ok) return [];
-    return (await res.json()).templates ?? [];
-  } catch {
-    return [];
-  }
-}
-
-export interface CalendarStatus {
-  linked: boolean;
-  expires_at?: string;
-  scopes?: string[];
-}
 
 /** Statut de liaison Google Calendar (route interne, clé requise). */
-export async function getCalendarStatus(userId: string): Promise<CalendarStatus> {
-  try {
-    const res = await fetch(
-      `${ENGINE_URL}/calendar/status?user_id=${encodeURIComponent(userId)}`,
-      { headers: { 'X-Internal-Key': INTERNAL_KEY }, cache: 'no-store' }
-    );
-    if (!res.ok) return { linked: false };
-    return res.json();
-  } catch {
-    return { linked: false };
-  }
-}
 
-export async function simulate(
-  loads: number[],
-  params?: Partial<{ p0: number; k1: number; k2: number; tau1: number; tau2: number }>
-): Promise<SimulateResult> {
-  const res = await fetch(`${ENGINE_URL}/simulate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ loads, ...params }),
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error(`Engine error ${res.status}: ${await res.text()}`);
-  return res.json();
-}

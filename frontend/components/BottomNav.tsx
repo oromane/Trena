@@ -6,46 +6,67 @@
  */
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { CalendarDays, Gauge, HeartPulse, Target, UserRound } from 'lucide-react';
+import { BookOpen, Dumbbell, Gauge, LayoutGrid, UserRound } from 'lucide-react';
 
 const TABS = [
-  { href: '/dashboard', label: 'Cockpit', icon: Gauge },
-  { href: '/dashboard#calendrier', label: 'Agenda', icon: CalendarDays },
-  { href: '/objectives', label: 'Objectifs', icon: Target },
-  { href: '/metrics', label: 'Métriques', icon: HeartPulse },
+  { href: '/dashboard', label: 'Accueil', icon: Gauge },
+  { href: '/strength', label: 'Muscu', icon: Dumbbell },
+  { href: '/autres', label: 'Autres', icon: LayoutGrid },
+  { href: '/guide', label: 'Guide', icon: BookOpen },
   { href: '/profile', label: 'Profil', icon: UserRound },
 ];
 
 export default function BottomNav() {
   const pathname = usePathname();
-  if (pathname === '/login' || pathname === '/') return null;
+  // Le Guide est public et porte sa propre navigation : la barre applicative
+  // (dont tous les liens exigent une session) n'y a pas sa place.
+  if (pathname === '/login' || pathname === '/' || pathname.startsWith('/guide'))
+    return null;
 
   return (
-    <nav
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-ats-bg/95 backdrop-blur-xl md:hidden"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-    >
-      <div className="mx-auto flex max-w-md items-stretch justify-around">
-        {TABS.map((t) => {
-          const active =
-            t.href === '/dashboard#calendrier'
-              ? false
-              : pathname.startsWith(t.href.split('#')[0]) && t.href !== '/dashboard#calendrier';
+    <>
+      {/*
+        Réserve la hauteur de la barre fixe. Placé ici plutôt qu'en padding sur
+        le <body> : la barre est masquée sur l'accueil public, la connexion et
+        le guide, où un padding global laissait 64 px de vide en bas de page.
+      */}
+      <div
+        aria-hidden
+        className="h-16 md:hidden"
+        style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+      />
+      <nav
+        className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-ats-bg/95 backdrop-blur-xl md:hidden"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        {/*
+          `flex-1 min-w-0` plutôt qu'une largeur minimale fixe : à 6 onglets,
+          un plancher de 56 px imposait 336 px et débordait sur les écrans de
+          320 px (iPhone SE, petits Android).
+        */}
+        <div className="mx-auto flex max-w-md items-stretch">
+        {TABS.map((t, i) => {
+          // Chaque onglet a désormais sa propre destination : on garde tout de
+          // même la logique « premier match » pour éviter qu'un préfixe commun
+          // n'allume deux onglets à la fois.
+          const firstMatchIndex = TABS.findIndex((x) => pathname.startsWith(x.href));
+          const active = firstMatchIndex === i;
           const Icon = t.icon;
           return (
             <Link
-              key={t.href}
+              key={t.label}
               href={t.href}
-              className={`flex min-w-[56px] flex-col items-center gap-0.5 px-2 pb-1.5 pt-2 text-[10px] font-medium transition-colors ${
+              className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 px-1 pb-1.5 pt-2 text-[10px] font-medium transition-colors ${
                 active ? 'text-ats-green' : 'text-ats-muted'
               }`}
             >
-              <Icon className="h-5 w-5" />
-              {t.label}
+              <Icon className="h-5 w-5 shrink-0" />
+              <span className="w-full truncate text-center">{t.label}</span>
             </Link>
           );
         })}
-      </div>
-    </nav>
+        </div>
+      </nav>
+    </>
   );
 }

@@ -59,7 +59,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
       </head>
-      <body className="min-h-screen bg-ats-bg pb-16 font-sans text-ats-text antialiased md:pb-0">
+      {/* La réserve d'espace pour la barre mobile est gérée par BottomNav
+          lui-même : elle n'est ajoutée que sur les pages où la barre existe. */}
+      <body className="min-h-screen bg-ats-bg font-sans text-ats-text antialiased">
         {children}
         <BottomNav />
       </body>

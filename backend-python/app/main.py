@@ -9,13 +9,10 @@ from .logging_setup import setup_logging
 from .engine import banister, hrv, planner, trimp
 
 setup_logging()
-from .routers import calendar as calendar_router
-from .routers import daily as daily_router
 from .routers import dashboard as dashboard_router
+from .routers import disciplines as disciplines_router
 from .routers import garmin as garmin_router
 from .routers import ingest as ingest_router
-from .routers import plan as plan_router
-from .routers import sessions as sessions_router
 from .routers import strength as strength_router
 from .models import (
     DailyAdjustRequest,
@@ -33,13 +30,10 @@ app = FastAPI(
 )
 
 app.include_router(ingest_router.router)
-app.include_router(plan_router.router)
-app.include_router(daily_router.router)
-app.include_router(calendar_router.router)
 app.include_router(dashboard_router.router)
 app.include_router(garmin_router.router)
-app.include_router(sessions_router.router)
 app.include_router(strength_router.router)
+app.include_router(disciplines_router.router)
 
 
 @app.get("/health")

@@ -23,13 +23,11 @@ from ..services.garmin_sync import (
 router = APIRouter(prefix="/garmin", tags=["garmin"],
                    dependencies=[Depends(require_internal_key)])
 
-
 def _require_crypto() -> TokenCipher:
     if not settings.token_encryption_key:
         raise HTTPException(status_code=503,
                             detail="TOKEN_ENCRYPTION_KEY non configurée")
     return TokenCipher(settings.token_encryption_key)
-
 
 def _load_client(repo: SupabaseRepo, cipher: TokenCipher,
                  user_id: str) -> GarminClient:
@@ -41,7 +39,6 @@ def _load_client(repo: SupabaseRepo, cipher: TokenCipher,
         return GarminClient.from_token(token)
     except GarminAuthError as e:
         raise HTTPException(status_code=502, detail=str(e))
-
 
 def _store_token(repo: SupabaseRepo, cipher: TokenCipher,
                  client: GarminClient, user_id: str) -> None:
@@ -57,13 +54,11 @@ def _store_token(repo: SupabaseRepo, cipher: TokenCipher,
         "updated_at": now.isoformat(),
     })
 
-
 # ---------------------------------------------------- Étape 1 : email + mdp
 class LinkRequest(BaseModel):
     user_id: str
     email: str
     password: str
-
 
 @router.post("/link")
 def link(req: LinkRequest, repo: SupabaseRepo = Depends(get_repo)) -> dict:
@@ -85,13 +80,11 @@ def link(req: LinkRequest, repo: SupabaseRepo = Depends(get_repo)) -> dict:
     _store_token(repo, cipher, client, req.user_id)
     return {"linked": True}
 
-
 # ---------------------------------------------------- Étape 2 : code MFA
 class MfaRequest(BaseModel):
     user_id: str
     session_id: str
     mfa_code: str
-
 
 @router.post("/link/mfa")
 def link_mfa(req: MfaRequest,
@@ -107,7 +100,6 @@ def link_mfa(req: MfaRequest,
     _store_token(repo, cipher, client, req.user_id)
     return {"linked": True}
 
-
 @router.get("/status")
 def status(user_id: str, repo: SupabaseRepo = Depends(get_repo)) -> dict:
     row = repo.get_oauth_token(user_id, garmin_sync.PROVIDER)
@@ -122,18 +114,15 @@ def status(user_id: str, repo: SupabaseRepo = Depends(get_repo)) -> dict:
         return {"linked": False, "last_sync": last_sync}
     return {"linked": True, "updated_at": row.get("updated_at"), "last_sync": last_sync}
 
-
 @router.delete("/link/{user_id}")
 def unlink(user_id: str, repo: SupabaseRepo = Depends(get_repo)) -> dict:
     repo.delete_oauth_token(user_id, garmin_sync.PROVIDER)
     return {"deleted": True}
 
-
 class SyncRequest(BaseModel):
     user_id: str
     days: int = 7
     until: date_type | None = None
-
 
 def _hr_params(repo: SupabaseRepo, user_id: str) -> tuple[float, float, str]:
     """(hr_rest, hr_max, sex) depuis le profil, avec repli raisonnable."""
@@ -150,7 +139,6 @@ def _hr_params(repo: SupabaseRepo, user_id: str) -> tuple[float, float, str]:
             hr_rest = 60
     return float(hr_rest), float(profile.get("hr_max") or 190), \
         (profile.get("sex") or "M")
-
 
 def _run_sync_job(repo: SupabaseRepo, user_id: str, days: int, until,
                   run_id: str | None, cipher, client) -> None:
@@ -202,7 +190,6 @@ def _run_sync_job(repo: SupabaseRepo, user_id: str, days: int, until,
         "error": (" | ".join(errors)[:1000]) or None,
     })
 
-
 @router.post("/sync")
 def sync(req: SyncRequest, background_tasks: BackgroundTasks,
          repo: SupabaseRepo = Depends(get_repo)) -> dict:
@@ -218,12 +205,10 @@ def sync(req: SyncRequest, background_tasks: BackgroundTasks,
                              req.until, run_id, cipher, client)
     return {"status": "running", "sync_run_id": run_id}
 
-
 class ImportActivitiesRequest(BaseModel):
     user_id: str
     days: int = 14
     until: date_type | None = None
-
 
 @router.post("/import-activities")
 def import_activities(req: ImportActivitiesRequest,
@@ -237,7 +222,6 @@ def import_activities(req: ImportActivitiesRequest,
     return garmin_sync.import_activities(
         repo, client, req.user_id, days=req.days, until=req.until,
         hr_rest=hr_rest, hr_max=hr_max, sex=sex)
-
 
 # ---------------------------------------------------- Replan / fenêtre glissante
 def _metrics_snapshot(repo: SupabaseRepo, user_id: str) -> dict:
@@ -267,28 +251,8 @@ def _metrics_snapshot(repo: SupabaseRepo, user_id: str) -> dict:
         logger.exception("metrics_snapshot_failed", extra={"user_id": user_id})
         return {}
 
-
 class ReplanRequest(BaseModel):
     user_id: str
     trigger: str = "WEEKLY"
     window_days: int = 14
 
-
-@router.post("/replan")
-def replan(req: ReplanRequest, repo: SupabaseRepo = Depends(get_repo)) -> dict:
-    """Réconcilie la fenêtre glissante Garmin (idempotent).
-
-    Ouvre une révision de plan, retract les séances déjà matérialisées dans la
-    fenêtre, puis push les séances planifiées des `window_days` prochains jours.
-    Un seul writer vers Garmin. À déclencher par n8n (cron) ou l'app.
-    """
-    if not 1 <= req.window_days <= 21:
-        raise HTTPException(status_code=422, detail="window_days doit être entre 1 et 21")
-    cipher = _require_crypto()
-    client = _load_client(repo, cipher, req.user_id)  # fail-fast si non lié
-    snapshot = _metrics_snapshot(repo, req.user_id)
-    from ..services import plan_sync
-    return plan_sync.run_replan(
-        repo, client, req.user_id,
-        trigger=req.trigger, metrics_snapshot=snapshot,
-        window_days=req.window_days)

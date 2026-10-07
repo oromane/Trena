@@ -1,7 +1,9 @@
 import { type CookieOptions, createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLIC_PATHS = ['/', '/login', '/auth'];
+// Le Guide est un contenu pédagogique public : aucune donnée personnelle n'y
+// transite, il doit être consultable et partageable sans compte.
+const PUBLIC_PATHS = ['/', '/login', '/auth', '/guide'];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -27,9 +29,10 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  const isPublic = PUBLIC_PATHS.some(
-    (p) => request.nextUrl.pathname === p || request.nextUrl.pathname.startsWith('/auth/')
-  );
+  const isPublic =
+    PUBLIC_PATHS.some((p) => request.nextUrl.pathname === p) ||
+    request.nextUrl.pathname.startsWith('/auth/') ||
+    request.nextUrl.pathname.startsWith('/guide/');
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';

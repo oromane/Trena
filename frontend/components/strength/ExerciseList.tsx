@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import { ChevronDown, Dumbbell, SearchX } from 'lucide-react'
 
 interface Exercise {
   id: string
@@ -10,6 +10,8 @@ interface Exercise {
   muscle_primary: string
   muscles_secondary: string[]
   equipment: string[]
+  image_url: string | null
+  instructions_steps?: string[] | null
 }
 
 interface ExerciseListProps {
@@ -17,11 +19,25 @@ interface ExerciseListProps {
   limit?: number
 }
 
+const MUSCLES = ['chest', 'back', 'legs', 'shoulders', 'arms', 'core']
+
+const MUSCLE_LABELS: Record<string, string> = {
+  chest: 'Pectoraux',
+  back: 'Dos',
+  legs: 'Jambes',
+  shoulders: 'Épaules',
+  arms: 'Bras',
+  core: 'Sangle abdo',
+}
+
 export default function ExerciseList({ muscle, limit = 50 }: ExerciseListProps) {
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedMuscle, setSelectedMuscle] = useState(muscle || '')
+  // Catalogue en consultation : la fiche se déplie sur place, il n'y a plus
+  // de création de séance vers laquelle naviguer.
+  const [openId, setOpenId] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchExercises = async () => {
@@ -48,76 +64,137 @@ export default function ExerciseList({ muscle, limit = 50 }: ExerciseListProps) 
     fetchExercises()
   }, [selectedMuscle, limit])
 
-  if (loading) return <div className="text-center py-8">Chargement des exercices...</div>
-  if (error) return <div className="text-red-500 text-center py-8">Erreur: {error}</div>
-
-  const muscles = ['chest', 'back', 'legs', 'shoulders', 'arms', 'core']
-
   return (
     <div className="space-y-6">
-      {/* Filtres */}
-      <div className="flex gap-2 flex-wrap">
+      {/* Filtres — pilules horizontales scrollables sur mobile */}
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
         <button
           onClick={() => setSelectedMuscle('')}
-          className={`px-4 py-2 rounded-lg transition ${
+          className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
             selectedMuscle === ''
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
+              ? 'bg-ats-green text-white'
+              : 'card-2 text-ats-muted hover:text-ats-text'
           }`}
         >
           Tous
         </button>
-        {muscles.map((m) => (
+        {MUSCLES.map((m) => (
           <button
             key={m}
             onClick={() => setSelectedMuscle(m)}
-            className={`px-4 py-2 rounded-lg transition capitalize ${
+            className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
               selectedMuscle === m
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
+                ? 'bg-ats-green text-white'
+                : 'card-2 text-ats-muted hover:text-ats-text'
             }`}
           >
-            {m}
+            {MUSCLE_LABELS[m] ?? m}
           </button>
         ))}
       </div>
 
       {/* Liste des exercices */}
-      <div className="grid gap-4">
-        {exercises.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">Aucun exercice trouvé</p>
-        ) : (
-          exercises.map((exercise) => (
-            <Link
-              key={exercise.id}
-              href={`/strength/sessions/new?exercise=${exercise.id}`}
-              className="p-4 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition"
+      {loading ? (
+        <div className="grid gap-3 xl:grid-cols-2 2xl:grid-cols-3">
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="card-2 animate-pulse p-3" style={{ height: 88 }} />
+          ))}
+        </div>
+      ) : error ? (
+        <div className="card border border-ats-red/30 p-6 text-sm text-ats-red">Erreur : {error}</div>
+      ) : exercises.length === 0 ? (
+        <div className="card flex flex-col items-center gap-2 p-12 text-center text-ats-muted">
+          <SearchX className="h-6 w-6 text-ats-gray" />
+          Aucun exercice trouvé
+        </div>
+      ) : (
+        <div className="grid gap-3 xl:grid-cols-2 2xl:grid-cols-3">
+          {exercises.map((exercise) => (
+            <div key={exercise.id} className="card-2 overflow-hidden">
+            <button
+              type="button"
+              onClick={() =>
+                setOpenId(openId === exercise.id ? null : exercise.id)
+              }
+              aria-expanded={openId === exercise.id}
+              className="group flex w-full items-center gap-4 p-3 text-left transition-colors hover:bg-ats-card"
             >
-              <h3 className="font-bold text-lg">{exercise.name}</h3>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-sm capitalize">
-                  {exercise.muscle_primary}
-                </span>
-                {exercise.muscles_secondary.map((m) => (
-                  <span
-                    key={m}
-                    className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded text-sm capitalize"
-                  >
-                    {m}
-                  </span>
-                ))}
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-ats-bg2">
+                {exercise.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={exercise.image_url}
+                    alt={exercise.name}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                      e.currentTarget.nextElementSibling?.classList.remove('hidden')
+                    }}
+                  />
+                ) : null}
+                <Dumbbell className={`h-6 w-6 text-ats-gray ${exercise.image_url ? 'hidden' : ''}`} />
               </div>
-              <div className="mt-2 flex gap-1 flex-wrap">
-                {exercise.equipment.map((eq) => (
-                  <span key={eq} className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                    {eq}
+              <div className="min-w-0 flex-1">
+                <h3 className="truncate font-bold capitalize">{exercise.name}</h3>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <span className="rounded-full bg-ats-green/10 px-2.5 py-0.5 text-xs font-medium capitalize text-ats-green">
+                    {MUSCLE_LABELS[exercise.muscle_primary] ?? exercise.muscle_primary}
                   </span>
-                ))}
+                  {exercise.muscles_secondary.map((m) => (
+                    <span
+                      key={m}
+                      className="rounded-full bg-ats-bg2 px-2.5 py-0.5 text-xs capitalize text-ats-muted"
+                    >
+                      {m}
+                    </span>
+                  ))}
+                </div>
+                {exercise.equipment.length > 0 && (
+                  <p className="mt-1.5 text-xs capitalize text-ats-gray">
+                    {exercise.equipment.join(' · ')}
+                  </p>
+                )}
               </div>
-            </Link>
-          ))
-        )}
-      </div>
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-ats-gray transition-transform ${
+                  openId === exercise.id ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+
+            {openId === exercise.id && (
+              <div className="border-t border-white/5 px-4 pb-4 pt-3">
+                {exercise.instructions_steps?.length ? (
+                  <>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ats-gray">
+                      Repères d&apos;exécution
+                    </p>
+                    <ol className="mt-2 space-y-1.5">
+                      {exercise.instructions_steps.map((step, i) => (
+                        <li
+                          key={i}
+                          className="flex gap-2.5 text-[12px] leading-relaxed text-ats-muted"
+                        >
+                          <span className="metric shrink-0 text-ats-green">
+                            {i + 1}.
+                          </span>
+                          <span>{step}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </>
+                ) : (
+                  <p className="text-[12px] text-ats-gray">
+                    Aucun repère d&apos;exécution disponible pour cet exercice.
+                  </p>
+                )}
+              </div>
+            )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
