@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ChevronDown, Gauge, Heart, Route, Timer, Weight } from 'lucide-react';
 import type { DashboardOverview, FeedEntry } from '@/lib/engine';
 import { MascotAvatar } from '@/components/brand/Mascot';
+import MobileLimit from '@/components/ui/MobileLimit';
 import {
   ACCENT,
   DISCIPLINE_HREF,
@@ -178,9 +179,12 @@ export default function ActivityFeed({ data }: { data: DashboardOverview }) {
         </div>
       ) : (
         <div className="card divide-y divide-white/5 overflow-hidden">
-          {data.recent.map((e) => (
-            <Row key={e.id} entry={e} today={data.date} />
-          ))}
+          {/* Mobile : 5 séances, le reste à la demande (P3-11) */}
+          <MobileLimit limit={5} noun="séances">
+            {data.recent.map((e) => (
+              <Row key={e.id} entry={e} today={data.date} />
+            ))}
+          </MobileLimit>
         </div>
       )}
     </section>

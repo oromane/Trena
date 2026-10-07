@@ -120,13 +120,14 @@ export default function PhysioGrid({ physio }: { physio: DashboardOverview['phys
   }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    // Mobile : grille 2x2 compacte, explications via l'icône ⓘ (P3-11).
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {available.map((d) => {
         const block = physio[d.key]!;
         const value = block.today ?? block.baseline;
         const Icon = d.icon;
         return (
-          <div key={d.key} className="card group p-5">
+          <div key={d.key} className="card group p-4 sm:p-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-ats-muted">
                 <Icon className="h-4 w-4" />
@@ -141,7 +142,7 @@ export default function PhysioGrid({ physio }: { physio: DashboardOverview['phys
               <Delta block={block} higherIsBetter={d.higherIsBetter} />
             </div>
             <div className="mt-3 flex items-baseline gap-1.5">
-              <span className="metric text-3xl font-semibold">
+              <span className="metric text-2xl font-semibold sm:text-3xl">
                 {value != null ? (d.format ? d.format(value) : Math.round(value)) : '—'}
               </span>
               <span className="text-xs text-ats-muted">{d.unit}</span>
@@ -154,8 +155,8 @@ export default function PhysioGrid({ physio }: { physio: DashboardOverview['phys
                 norme {d.format ? d.format(block.baseline) : Math.round(block.baseline)} {d.unit}
               </p>
             )}
-            <p className="mt-3 text-[11px] leading-relaxed text-ats-muted">{d.explain}</p>
-            <p className="mt-1.5 text-[11px] leading-relaxed text-ats-gray">{d.impact}</p>
+            <p className="mt-3 hidden text-[11px] leading-relaxed text-ats-muted sm:block">{d.explain}</p>
+            <p className="mt-1.5 hidden text-[11px] leading-relaxed text-ats-gray sm:block">{d.impact}</p>
             <AskButton question={d.question} className="mt-3" />
           </div>
         );

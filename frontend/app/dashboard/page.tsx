@@ -19,6 +19,9 @@ import { ensureProfile } from '@/app/actions';
 import { getDashboardHome, getGarminStatus } from '@/lib/engine';
 import { FriendsCard } from '@/components/social/FriendFeed';
 import DailyCard from '@/components/advisor/DailyCard';
+import MobileCollapse from '@/components/ui/MobileCollapse';
+import { fmtDistance, fmtDuration } from '@/components/home/shared';
+import type { DashboardOverview } from '@/lib/engine';
 
 function freshnessLabel(dateStr: string, today: string): string {
   const diff = Math.round(
@@ -27,6 +30,14 @@ function freshnessLabel(dateStr: string, today: string): string {
   if (diff <= 0) return "aujourd'hui";
   if (diff === 1) return 'hier';
   return `il y a ${diff} jours`;
+}
+
+function weekSummary(o: DashboardOverview): string {
+  const w = o.totals.week;
+  const parts = [`${w.sessions} séance${w.sessions > 1 ? 's' : ''}`];
+  if (w.minutes) parts.push(fmtDuration(w.minutes));
+  if (w.distance_m) parts.push(fmtDistance(w.distance_m));
+  return `Cette semaine : ${parts.join(' · ')}`;
 }
 
 export default async function DashboardPage() {
@@ -100,9 +111,11 @@ export default async function DashboardPage() {
             <PhysioGrid physio={overview.physio} />
           </section>
 
-          <TotalsPanel data={overview} />
-
-          <DisciplineTiles data={overview} />
+          {/* Mobile : volume et disciplines repliés derrière un résumé (P3-11) */}
+          <MobileCollapse title="Volume et disciplines" summary={weekSummary(overview)}>
+            <TotalsPanel data={overview} />
+            <DisciplineTiles data={overview} />
+          </MobileCollapse>
 
           <ActivityFeed data={overview} />
 
