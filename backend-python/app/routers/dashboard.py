@@ -7,6 +7,7 @@
 
 Un seul appel serveur-à-serveur depuis Next.js — évite 6 allers-retours.
 """
+import logging
 from datetime import date as date_type
 from datetime import timedelta
 
@@ -15,8 +16,10 @@ from pydantic import BaseModel
 
 from ..config import settings
 from ..db.repo import SupabaseRepo, get_repo
-from ..engine import banister, calibration, foster, hrv, insights, paces, workout
+from ..engine import activity_compare, banister, calibration, foster, hrv, insights, paces, workout
 from ..security import require_internal_key
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"],
                    dependencies=[Depends(require_internal_key)])
@@ -248,6 +251,30 @@ def _feed_entry(s: dict) -> dict:
     }
 
 
+def _feed_with_analysis(repo: SupabaseRepo, user_id: str, recent: list[dict],
+                        sessions: list[dict]) -> list[dict]:
+    """Flux + analyse chiffrée instantanée + commentaire de Perlo s'il existe.
+
+    L'historique est celui déjà chargé pour l'accueil (120 j) : aucune
+    requête supplémentaire hors la lecture des commentaires (une requête).
+    """
+    try:
+        comments = repo.get_activity_insights(user_id, [s["id"] for s in recent])
+    except Exception:
+        # Migration 014 non jouée : l'analyse chiffrée reste affichée.
+        logger.warning("activity_insights indisponibles", exc_info=True)
+        comments = {}
+    out = []
+    for s in recent:
+        entry = _feed_entry(s)
+        a = activity_compare.analyze(s, activity_compare.history_for(s, sessions))
+        entry["analysis"] = a.to_dict()
+        c = comments.get(s["id"])
+        entry["comment"] = c["text"] if c else None
+        out.append(entry)
+    return out
+
+
 def _week_streak(completed_dates: set[date_type], today: date_type) -> int:
     """Semaines consécutives (lundi-dimanche) avec au moins une séance.
 
@@ -354,7 +381,7 @@ def overview(req: OverviewRequest,
         "totals": {"week": week_totals, "month": month_totals},
         "by_discipline": tiles,
         "week": week_days,
-        "recent": [_feed_entry(s) for s in recent],
+        "recent": _feed_with_analysis(repo, req.user_id, recent, sessions),
         "streak_weeks": _week_streak(completed_dates, today),
         "active_days_28": len({d for d in completed_dates
                                if d > today - timedelta(days=28)}),

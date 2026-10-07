@@ -14,7 +14,7 @@ from datetime import date
 
 from ..config import settings
 from ..db.repo import SupabaseRepo
-from . import llm
+from . import activity, llm
 from .context import SYSTEM_RULES, build_context
 
 log = logging.getLogger(__name__)
@@ -100,6 +100,7 @@ async def run_all(repo: SupabaseRepo, day: date | None = None) -> dict:
     """Génère l'analyse pour chaque utilisateur actif, un par un (CPU partagé)."""
     day = day or date.today()
     done, failed = 0, 0
+    commented = 0
     for uid in repo.list_users_with_recent_metrics():
         try:
             await generate(repo, uid, day)
@@ -107,8 +108,11 @@ async def run_all(repo: SupabaseRepo, day: date | None = None) -> dict:
         except Exception:
             failed += 1
             log.exception("advisor_daily: échec pour %s", uid)
-    log.info("advisor_daily: %s générées, %s échecs", done, failed)
-    return {"generated": done, "failed": failed}
+        # Rattrapage : séances synchronisées sans passer par /garmin/sync.
+        commented += (await activity.run_pending(repo, uid, day))["generated"]
+    log.info("advisor_daily: %s générées, %s échecs, %s séances commentées",
+             done, failed, commented)
+    return {"generated": done, "failed": failed, "activities_commented": commented}
 
 
 def get_or_summary(repo: SupabaseRepo, user_id: str, day: date | None = None) -> dict:

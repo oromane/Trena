@@ -450,6 +450,26 @@ class SupabaseRepo:
         )
         return rows[0] if rows else None
 
+    def get_activity_insights(self, user_id: str, session_ids: list[str]) -> dict[str, dict]:
+        """Commentaires existants, indexés par session_id (une seule requête)."""
+        if not session_ids:
+            return {}
+        rows = self._get("/activity_insights", {
+            "user_id": f"eq.{user_id}",
+            "session_id": f"in.({','.join(session_ids)})",
+            "select": "session_id,text,generated_at",
+        })
+        return {r["session_id"]: r for r in rows}
+
+    def upsert_activity_insight(self, session_id: str, user_id: str, text: str,
+                                model: str) -> dict | None:
+        rows = self._post(
+            "/activity_insights?on_conflict=session_id",
+            {"session_id": session_id, "user_id": user_id, "text": text, "model": model},
+            headers={"Prefer": "return=representation,resolution=merge-duplicates"},
+        )
+        return rows[0] if rows else None
+
 
 # Singleton paresseux, remplaçable dans les tests via dependency_overrides
 _repo: SupabaseRepo | None = None

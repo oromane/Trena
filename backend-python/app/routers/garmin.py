@@ -12,6 +12,7 @@ from ..config import settings
 from ..crypto import TokenCipher
 from ..db.repo import SupabaseRepo, get_repo
 from ..security import require_internal_key
+from ..advisor import activity as advisor_activity
 from ..services import garmin_sync
 from ..services.garmin_sync import (
     GarminAuthError,
@@ -203,6 +204,10 @@ def sync(req: SyncRequest, background_tasks: BackgroundTasks,
     run_id = repo.start_sync_run(req.user_id)
     background_tasks.add_task(_run_sync_job, repo, req.user_id, req.days,
                              req.until, run_id, cipher, client)
+    # Après la synchro (les tâches s'exécutent dans l'ordre) : commentaires
+    # de Perlo sur les nouvelles séances. Lent (LLM CPU), sans effet sur le
+    # statut de synchro déjà clôturé.
+    background_tasks.add_task(advisor_activity.run_pending, repo, req.user_id)
     return {"status": "running", "sync_run_id": run_id}
 
 class ImportActivitiesRequest(BaseModel):

@@ -3,8 +3,9 @@
  * « Strava » du hub : ce que tu as fait, dans l'ordre, en un coup d'œil.
  */
 import Link from 'next/link';
-import { Gauge, Heart, Route, Timer, Weight } from 'lucide-react';
+import { ChevronDown, Gauge, Heart, Route, Timer, Weight } from 'lucide-react';
 import type { DashboardOverview, FeedEntry } from '@/lib/engine';
+import { MascotAvatar } from '@/components/brand/Mascot';
 import {
   ACCENT,
   DISCIPLINE_HREF,
@@ -81,12 +82,75 @@ function Row({ entry, today }: { entry: FeedEntry; today: string }) {
   );
 
   const base = 'flex items-start gap-4 px-5 py-4';
-  return href ? (
-    <Link href={href} className={`${base} transition-colors hover:bg-ats-card2/50`}>
-      {inner}
-    </Link>
-  ) : (
-    <div className={base}>{inner}</div>
+  return (
+    <div>
+      {href ? (
+        <Link href={href} className={`${base} transition-colors hover:bg-ats-card2/50`}>
+          {inner}
+        </Link>
+      ) : (
+        <div className={base}>{inner}</div>
+      )}
+      <Analysis entry={entry} />
+    </div>
+  );
+}
+
+const TAG_TONE: Record<string, string> = {
+  record: 'text-ats-violet',
+  efficiency: 'text-ats-green',
+  hard: 'text-ats-orange',
+  easy: 'text-ats-blue',
+};
+
+/**
+ * Analyse de la séance, hors du lien de la ligne (un élément interactif ne
+ * doit pas être imbriqué dans un autre). <details> natif : aucun JS client.
+ */
+function Analysis({ entry }: { entry: FeedEntry }) {
+  const a = entry.analysis;
+  if (!a) return null;
+  const hasMore = a.facts.length > 0 || !!entry.comment;
+  const tone = TAG_TONE[a.tags[0]] ?? 'text-ats-muted';
+  const title = (
+    <span className="flex items-center gap-2">
+      <MascotAvatar size={18} />
+      <span className={`min-w-0 text-[11px] font-semibold ${tone}`}>{a.headline}</span>
+      {hasMore && (
+        <ChevronDown
+          aria-label="Voir l'analyse"
+          className="h-3.5 w-3.5 shrink-0 text-ats-gray transition-transform group-open:rotate-180"
+        />
+      )}
+    </span>
+  );
+  // Aligné sous le titre de la séance : 20 px de marge + 40 px d'icône + 16 px d'écart.
+  const pad = 'pb-4 pl-[4.75rem] pr-5 -mt-2';
+  if (!hasMore) return <div className={pad}>{title}</div>;
+  return (
+    <details className={`group ${pad}`}>
+      <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+        {title}
+      </summary>
+      <div className="mt-2 space-y-2 rounded-xl bg-ats-card2/60 p-3 text-xs leading-relaxed text-ats-muted">
+        {entry.comment && <p className="text-ats-text/90">{entry.comment}</p>}
+        {a.facts.length > 0 && (
+          <ul className="space-y-1">
+            {a.facts.map((f, i) => (
+              <li key={i} className="flex gap-2">
+                <span className="text-ats-green">•</span>
+                <span>{f}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {!entry.comment && (
+          <p className="text-[10px] text-ats-gray">
+            Le commentaire de Perlo arrive quelques minutes après la synchro.
+          </p>
+        )}
+      </div>
+    </details>
   );
 }
 

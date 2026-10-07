@@ -75,6 +75,17 @@ export interface FeedEntry {
   tonnage_kg: number | null;
   avg_hr: number | null;
   rpe: number | null;
+  /** Analyse chiffrée instantanée (comparaison à tes habitudes, 90 j). */
+  analysis?: ActivityAnalysis;
+  /** Commentaire de Perlo, rédigé en tâche de fond après la synchro. */
+  comment?: string | null;
+}
+
+export interface ActivityAnalysis {
+  headline: string;
+  facts: string[];
+  tags: ('record' | 'efficiency' | 'easy' | 'hard')[];
+  history_n: number;
 }
 
 export interface OverviewWeekDay {
