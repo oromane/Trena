@@ -73,13 +73,14 @@
 
 ## P2 — Modèle & données
 
-### P2-7 · TRIMP zonal — **M**
+### P2-7 · TRIMP zonal — **M** — ✅ FAIT (oct. 2026)
 **Problème.** Le vecteur de temps par zone FC est **stocké** mais le TRIMP est calculé sur la **FC moyenne** : donnée plus riche que ce que le modèle consomme.
 **Solution.** Calculer le TRIMP en zonal (somme pondérée du temps par zone) quand le vecteur est disponible, fallback FC moyenne sinon.
 **Critères d'acceptation.**
 - Pour une activité avec vecteur de zones, le TRIMP réel dérive du zonal.
 - Test unitaire comparant zonal vs FC moyenne sur un cas connu.
 **Dépendances.** Import Garmin complet (déjà en place).
+**Réalisé.** Banister intégré zone par zone (même échelle que l'existant, milieux des zones Garmin par défaut), contrôle de cohérence avec la FC moyenne mesurée (> 8 bpm d'écart : zones personnalisées, repli FC moyenne), musculation exclue, méthode tracée dans `activity_metrics.trimp_method`. Recalcul de l'historique : `POST /garmin/recompute-trimp` (simulation par défaut).
 
 ### P2-8 · Régénération de plan en diff/merge — **M**
 **Problème.** Régénérer = **purge + réinsertion** ; toute personnalisation manuelle est écrasée.
