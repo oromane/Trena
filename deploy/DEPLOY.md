@@ -178,6 +178,19 @@ Mise en place (une fois) :
    recharger le dashboard : la carte « Le point de Perlo » passe de
    « Synthèse du jour » à « Analyse du jour ».
 
+### 6.5 Analyse des séances (type Strava)
+
+Chaque séance du flux « Activités récentes » affiche :
+- une **analyse chiffrée instantanée** (records sur 90 jours, allure et FC
+  comparées à ta séance type, zones cardiaques, charge), calculée à la volée ;
+- un **commentaire de Perlo**, rédigé par l'IA locale en tâche de fond juste
+  après chaque synchro Garmin (et rattrapé au run de 6h30). Au plus 5 séances
+  par passage, sur les 3 derniers jours.
+
+Mise en place (une fois) : exécuter `sql/migration-014.sql` dans l'éditeur SQL
+Supabase (table `activity_insights`). Sans elle, l'analyse chiffrée s'affiche
+quand même ; seuls les commentaires manquent.
+
 ## 7. Éteindre l'ancien hébergement PC
 
 - Ne lance plus `Trena-tunnel.bat` (l'ancien tunnel local est remplacé).
