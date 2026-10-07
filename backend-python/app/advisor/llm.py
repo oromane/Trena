@@ -26,7 +26,8 @@ class LLMUnavailable(Exception):
     """Modèle injoignable, absent ou trop lent."""
 
 
-async def chat(system: str, user: str) -> str:
+async def chat(system: str, user: str, *, timeout_s: float | None = None,
+               max_tokens: int | None = None) -> str:
     payload = {
         "model": settings.llm_model,
         "stream": False,
@@ -35,7 +36,7 @@ async def chat(system: str, user: str) -> str:
         "options": {
             "temperature": 0.2,
             "num_ctx": 3072,
-            "num_predict": settings.llm_max_tokens,
+            "num_predict": max_tokens or settings.llm_max_tokens,
         },
         "messages": [
             {"role": "system", "content": system},
@@ -44,7 +45,7 @@ async def chat(system: str, user: str) -> str:
     }
     try:
         async with _gate:
-            async with httpx.AsyncClient(timeout=settings.llm_timeout_s) as client:
+            async with httpx.AsyncClient(timeout=timeout_s or settings.llm_timeout_s) as client:
                 r = await client.post(f"{settings.llm_base_url}/api/chat", json=payload)
         r.raise_for_status()
         content = r.json()["message"]["content"]

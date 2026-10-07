@@ -131,3 +131,26 @@ export async function getDashboardOverview(
 
 /** Statut de liaison Google Calendar (route interne, clé requise). */
 
+
+// ---------------------------------------------------------------- conseiller
+export interface AdvisorDaily {
+  date: string;
+  text: string;
+  /** 'llm' : rédigée à 6h30 par l'IA locale ; 'summary' : synthèse chiffrée. */
+  source: 'llm' | 'summary';
+  generated_at: string | null;
+}
+
+/** Analyse du jour de Perlo : instantanée (pré-générée ou calculée). */
+export async function getAdvisorDaily(userId: string): Promise<AdvisorDaily | null> {
+  try {
+    const res = await fetch(
+      `${ENGINE_URL}/advisor/daily?user_id=${encodeURIComponent(userId)}`,
+      { headers: { 'X-Internal-Key': INTERNAL_KEY }, cache: 'no-store' }
+    );
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}

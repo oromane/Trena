@@ -150,6 +150,34 @@ seul `performance-engine` l'interroge, et le frontend passe par `/api/advisor`
 - Libérer l'ancien modèle : `docker compose -f docker-compose.prod.yml exec llm ollama rm qwen3:4b`
 - En local, le service est optionnel : `docker compose --profile ai up`.
 
+### 6.4 Conseiller hybride : réponses instantanées + analyse du jour
+
+Sur ce VPS (4 vCPU partagés, sans GPU), le modèle met 1 à 2 minutes par
+réponse. Le conseiller n'y fait donc appel que pour les questions libres :
+
+| Question | Réponse | Délai |
+| --- | --- | --- |
+| Définition (« c'est quoi le HRV ? ») | Glossaire Trena | instantané |
+| État du jour (« comment je récupère ? ») | Analyse rédigée à 6h30, sinon synthèse chiffrée | instantané |
+| Question libre | IA locale, en streaming | 1 à 2 min |
+
+Mise en place (une fois) :
+
+1. **Supabase** : exécuter `sql/migration-013.sql` (table `advisor_daily`).
+   Sans elle, tout fonctionne mais seule la synthèse chiffrée s'affiche.
+2. **n8n** : importer `n8n/workflows/morning-advisor-daily.json`, puis l'activer
+   (cron 06:30, après la synchro Garmin de 6h). Il appelle
+   `POST /advisor/daily/run`, qui rend la main tout de suite et génère les
+   analyses en tâche de fond, un utilisateur après l'autre.
+3. **Test immédiat** (sans attendre 6h30), depuis le VPS :
+   ```bash
+   docker compose -f docker-compose.prod.yml exec performance-engine \
+     python -c "import httpx,os;print(httpx.post('http://localhost:8000/advisor/daily/run',json={},headers={'X-Internal-Key':os.environ['INTERNAL_API_KEY']}).json())"
+   ```
+   Réponse attendue : `{'queued': N}`. Compter 1 à 2 min par utilisateur, puis
+   recharger le dashboard : la carte « Le point de Perlo » passe de
+   « Synthèse du jour » à « Analyse du jour ».
+
 ## 7. Éteindre l'ancien hébergement PC
 
 - Ne lance plus `Trena-tunnel.bat` (l'ancien tunnel local est remplacé).

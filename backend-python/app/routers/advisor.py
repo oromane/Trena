@@ -3,7 +3,13 @@
 - POST /advisor/ask       : question libre. Contexte + glossaire -> LLM local.
                             Repli sur le glossaire si le modèle est indisponible.
 - POST /advisor/ask/stream: idem, réponse progressive (NDJSON) pour l'interface.
+- GET  /advisor/daily     : analyse du jour (pré-générée, sinon synthèse chiffrée).
+- POST /advisor/daily/run : génère l'analyse de tous les utilisateurs (n8n, 6h).
 - GET  /advisor/glossary  : définitions Trena (sans LLM).
+
+Aiguillage (advisor/intent.py) : définitions et questions sur l'état du jour
+sont servies instantanément ; seules les questions libres passent par le LLM,
+qui met 1 à 2 minutes sur le CPU du VPS.
 - GET  /advisor/status    : état du service LLM.
 """
 from __future__ import annotations
@@ -13,11 +19,12 @@ import logging
 import time
 from collections import defaultdict, deque
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from ..advisor import llm
+from ..advisor import daily, llm
+from ..advisor.intent import classify
 from ..advisor.context import SYSTEM_RULES, build_context
 from ..advisor.knowledge import GLOSSARY, get_retriever
 from ..config import settings
@@ -65,7 +72,7 @@ class Source(BaseModel):
 
 class AskResponse(BaseModel):
     answer: str
-    mode: str  # 'llm' | 'glossary' | 'safety'
+    mode: str  # 'llm' | 'definition' | 'daily' | 'summary' | 'glossary' | 'safety'
     sources: list[Source]
 
 
@@ -101,10 +108,24 @@ def _prepare(req: AskRequest, repo: SupabaseRepo):
     if any(m in low for m in EMERGENCY_MARKERS):
         return AskResponse(answer=EMERGENCY_REPLY, mode="safety", sources=[])
 
-    _rate_limit(req.user_id)
-
     hits = get_retriever().search(q, k=3)
     sources = [Source(key=e.key, term=e.term) for e, _ in hits]
+
+    intent = classify(q, has_glossary_hit=bool(hits))
+    if intent == "definition":
+        best = hits[0][0]
+        return AskResponse(answer=best.text, mode="definition",
+                           sources=[Source(key=best.key, term=best.term)])
+    if intent == "today":
+        try:
+            d = daily.get_or_summary(repo, req.user_id)
+            return AskResponse(answer=d["text"],
+                               mode="daily" if d["source"] == "llm" else "summary",
+                               sources=[])
+        except Exception:
+            log.exception("advisor: analyse du jour indisponible, passage au LLM")
+
+    _rate_limit(req.user_id)
     extracts = "\n".join(f"- {e.term} : {e.text}" for e, _ in hits) or "(aucun extrait)"
 
     try:
@@ -162,6 +183,8 @@ async def ask_stream(req: AskRequest,
             return
         hits, sources, user_msg = prepared
         src = [s.model_dump() for s in sources]
+        # Annoncé avant la génération : l'interface prévient que ce sera long.
+        yield _event(type="meta", mode="llm", sources=src)
         gen = llm.chat_stream(SYSTEM_RULES, user_msg)
         try:
             first = await gen.__anext__()
@@ -182,7 +205,6 @@ async def ask_stream(req: AskRequest,
                 return _event(type="reset")
             return _event(type="delta", text=piece)
 
-        yield _event(type="meta", mode="llm", sources=src)
         yield as_event(first)
         try:
             async for piece in gen:
@@ -195,3 +217,29 @@ async def ask_stream(req: AskRequest,
     return StreamingResponse(events(), media_type="application/x-ndjson",
                              headers={"Cache-Control": "no-store",
                                       "X-Accel-Buffering": "no"})
+
+
+# ---------------------------------------------------------------- analyse du jour
+@router.get("/daily")
+def get_daily(user_id: str, repo: SupabaseRepo = Depends(get_repo)) -> dict:
+    """Instantané : analyse générée à 6h, ou synthèse chiffrée à défaut."""
+    return daily.get_or_summary(repo, user_id)
+
+
+class DailyRunRequest(BaseModel):
+    user_id: str | None = None   # absent : tous les utilisateurs actifs
+
+
+@router.post("/daily/run", status_code=202)
+async def run_daily(req: DailyRunRequest, background: BackgroundTasks,
+                    repo: SupabaseRepo = Depends(get_repo)) -> dict:
+    """Lance la génération en tâche de fond et rend la main immédiatement.
+
+    Chaque analyse prend 1 à 2 min sur CPU : n8n n'attend pas la fin.
+    """
+    if req.user_id:
+        background.add_task(daily.generate, repo, req.user_id)
+        return {"queued": 1}
+    users = repo.list_users_with_recent_metrics()
+    background.add_task(daily.run_all, repo)
+    return {"queued": len(users)}
