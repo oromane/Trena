@@ -30,13 +30,13 @@ export default function GuideToc({ current }: { current?: string }) {
                   aria-current={active ? 'page' : undefined}
                   className={`flex gap-2.5 rounded-lg py-1.5 pl-2.5 pr-2 text-[13px] leading-snug transition-colors ${
                     active
-                      ? 'bg-ats-green/10 font-semibold text-ats-green'
+                      ? 'bg-ats-green/10 font-semibold text-ats-green-fg'
                       : 'text-ats-muted hover:bg-ats-card2 hover:text-ats-text'
                   }`}
                 >
                   <span
                     className={`metric shrink-0 text-[10px] ${
-                      active ? 'text-ats-green' : 'text-ats-gray'
+                      active ? 'text-ats-green-fg' : 'text-ats-gray'
                     }`}
                   >
                     {String(i + 1).padStart(2, '0')}
@@ -53,7 +53,7 @@ export default function GuideToc({ current }: { current?: string }) {
           aria-current={current === 'sources' ? 'page' : undefined}
           className={`mt-3 flex items-center gap-2.5 rounded-lg border-t border-white/5 py-2.5 pl-2.5 pr-2 text-[13px] transition-colors ${
             current === 'sources'
-              ? 'font-semibold text-ats-blue'
+              ? 'font-semibold text-ats-blue-fg'
               : 'text-ats-gray hover:text-ats-text'
           }`}
         >

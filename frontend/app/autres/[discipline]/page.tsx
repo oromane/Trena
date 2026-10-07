@@ -87,7 +87,7 @@ export default async function DisciplinePage({
           </Link>
           <h1 className="mt-4 text-3xl font-bold">{pending.label}</h1>
           <div className="card mt-6 flex gap-3 p-5">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-ats-blue" />
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-ats-blue-fg" />
             <div>
               <p className="font-semibold text-ats-text">Pas encore disponible</p>
               <p className="mt-1.5 text-sm leading-relaxed text-ats-muted">
@@ -224,7 +224,7 @@ export default async function DisciplinePage({
               </>
             ) : (
               <section className="card p-6">
-                <p className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-ats-blue">
+                <p className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-ats-blue-fg">
                   <Watch className="h-3.5 w-3.5" />
                   Aucune activité
                 </p>
@@ -234,7 +234,7 @@ export default async function DisciplinePage({
                 </p>
                 <Link
                   href="/profile"
-                  className="mt-4 inline-flex items-center rounded-xl border border-ats-green/30 bg-ats-green/10 px-4 py-2 text-sm font-semibold text-ats-green transition-colors hover:bg-ats-green/20"
+                  className="mt-4 inline-flex items-center rounded-xl border border-ats-green/30 bg-ats-green/10 px-4 py-2 text-sm font-semibold text-ats-green-fg transition-colors hover:bg-ats-green/20"
                 >
                   Synchroniser Garmin
                 </Link>

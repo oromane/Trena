@@ -48,6 +48,10 @@ jobs:
       - name: Type-check
         run: npx tsc --noEmit
 
+      # P3-12 : toute couleur de texte reste lisible (WCAG AA) dans les 2 thèmes.
+      - name: Contraste des couleurs de texte
+        run: python3 ../scripts/check_contrast.py
+
       # P0-2 : le frontend ne lit ni n'écrit aucune table métier. Supabase n'y
       # sert qu'à l'authentification ; tout le reste passe par le moteur.
       - name: Aucun accès direct aux tables Supabase

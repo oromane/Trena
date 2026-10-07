@@ -38,25 +38,25 @@ export const ACCENT: Record<
   { text: string; bg: string; border: string; dot: string }
 > = {
   green: {
-    text: 'text-ats-green',
+    text: 'text-ats-green-fg',
     bg: 'bg-ats-green/10',
     border: 'border-ats-green/25',
     dot: 'bg-ats-green',
   },
   blue: {
-    text: 'text-ats-blue',
+    text: 'text-ats-blue-fg',
     bg: 'bg-ats-blue/10',
     border: 'border-ats-blue/25',
     dot: 'bg-ats-blue',
   },
   violet: {
-    text: 'text-ats-violet',
+    text: 'text-ats-violet-fg',
     bg: 'bg-ats-violet/10',
     border: 'border-ats-violet/25',
     dot: 'bg-ats-violet',
   },
   orange: {
-    text: 'text-ats-orange',
+    text: 'text-ats-orange-fg',
     bg: 'bg-ats-orange/10',
     border: 'border-ats-orange/25',
     dot: 'bg-ats-orange',

@@ -21,9 +21,9 @@ import {
 import { SECTIONS } from '@/components/guide/sections';
 
 const STRENGTH_CLS: Record<EvidenceStrength, string> = {
-  high: 'border-ats-green/30 bg-ats-green/10 text-ats-green',
-  moderate: 'border-ats-blue/30 bg-ats-blue/10 text-ats-blue',
-  low: 'border-ats-orange/30 bg-ats-orange/10 text-ats-orange',
+  high: 'border-ats-green/30 bg-ats-green/10 text-ats-green-fg',
+  moderate: 'border-ats-blue/30 bg-ats-blue/10 text-ats-blue-fg',
+  low: 'border-ats-orange/30 bg-ats-orange/10 text-ats-orange-fg',
 };
 
 type SortKey = 'number' | 'weight' | 'year';
@@ -44,7 +44,7 @@ function Chip({
       aria-pressed={on}
       className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
         on
-          ? 'border-ats-green/40 bg-ats-green/15 text-ats-green'
+          ? 'border-ats-green/40 bg-ats-green/15 text-ats-green-fg'
           : 'border-white/10 text-ats-muted hover:border-white/20 hover:text-ats-text'
       }`}
     >
@@ -60,7 +60,7 @@ function Card({ r }: { r: Reference }) {
   return (
     <li className="card p-5">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="metric text-xs font-semibold text-ats-green">
+        <span className="metric text-xs font-semibold text-ats-green-fg">
           [{REFERENCE_INDEX[r.id]}]
         </span>
         <span
@@ -118,7 +118,7 @@ function Card({ r }: { r: Reference }) {
         )}
         {r.erratum && (
           <div className="rounded-lg border border-ats-orange/25 bg-ats-orange/[0.07] p-2.5">
-            <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ats-orange">
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ats-orange-fg">
               Correction publiée
             </dt>
             <dd className="mt-0.5 text-[11px] leading-relaxed text-ats-muted">
@@ -131,7 +131,7 @@ function Card({ r }: { r: Reference }) {
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-white/5 pt-2.5">
         <p
           className={`flex items-start gap-1.5 text-[10px] leading-relaxed ${
-            verified ? 'text-ats-green' : 'text-ats-orange'
+            verified ? 'text-ats-green-fg' : 'text-ats-orange-fg'
           }`}
         >
           {verified ? (
@@ -151,7 +151,7 @@ function Card({ r }: { r: Reference }) {
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-ats-green hover:underline"
+            className="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-ats-green-fg hover:underline"
           >
             {r.doi ? 'DOI' : 'PubMed'}
             <ExternalLink className="h-3 w-3" />

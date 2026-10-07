@@ -87,35 +87,35 @@ const TONES: Record<
   key: {
     border: 'border-ats-green/25',
     bg: 'bg-ats-green/[0.07]',
-    text: 'text-ats-green',
+    text: 'text-ats-green-fg',
     Icon: CheckCircle2,
     label: 'À retenir',
   },
   warn: {
     border: 'border-ats-red/25',
     bg: 'bg-ats-red/[0.07]',
-    text: 'text-ats-red',
+    text: 'text-ats-red-fg',
     Icon: AlertTriangle,
     label: 'Attention',
   },
   myth: {
     border: 'border-ats-orange/25',
     bg: 'bg-ats-orange/[0.07]',
-    text: 'text-ats-orange',
+    text: 'text-ats-orange-fg',
     Icon: ShoppingBag,
     label: 'Idée reçue',
   },
   info: {
     border: 'border-ats-blue/25',
     bg: 'bg-ats-blue/[0.07]',
-    text: 'text-ats-blue',
+    text: 'text-ats-blue-fg',
     Icon: HelpCircle,
     label: 'Nuance',
   },
   tip: {
     border: 'border-ats-violet/25',
     bg: 'bg-ats-violet/[0.07]',
-    text: 'text-ats-violet',
+    text: 'text-ats-violet-fg',
     Icon: Lightbulb,
     label: 'En pratique',
   },
@@ -153,17 +153,17 @@ type Level = 'prouve' | 'plausible' | 'marketing';
 const LEVELS: Record<Level, { label: string; cls: string; help: string }> = {
   prouve: {
     label: 'Prouvé',
-    cls: 'border-ats-green/30 bg-ats-green/10 text-ats-green',
+    cls: 'border-ats-green/30 bg-ats-green/10 text-ats-green-fg',
     help: 'Consensus solide, plusieurs études convergentes de bonne qualité',
   },
   plausible: {
     label: 'Plausible',
-    cls: 'border-ats-blue/30 bg-ats-blue/10 text-ats-blue',
+    cls: 'border-ats-blue/30 bg-ats-blue/10 text-ats-blue-fg',
     help: 'Piste crédible mais preuves limitées, contradictoires ou de faible qualité',
   },
   marketing: {
     label: 'Marketing',
-    cls: 'border-ats-orange/30 bg-ats-orange/10 text-ats-orange',
+    cls: 'border-ats-orange/30 bg-ats-orange/10 text-ats-orange-fg',
     help: 'Affirmation répandue dans le commerce mais non soutenue par les données',
   },
 };
@@ -208,10 +208,10 @@ export function KeyNumber({
   tone?: 'green' | 'blue' | 'orange' | 'violet';
 }) {
   const color = {
-    green: 'text-ats-green',
-    blue: 'text-ats-blue',
-    orange: 'text-ats-orange',
-    violet: 'text-ats-violet',
+    green: 'text-ats-green-fg',
+    blue: 'text-ats-blue-fg',
+    orange: 'text-ats-orange-fg',
+    violet: 'text-ats-violet-fg',
   }[tone];
   return (
     <div className="card-2 p-4">

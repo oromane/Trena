@@ -24,7 +24,7 @@ export default function AddFriendForm() {
         </SubmitButton>
       </div>
       {state && (
-        <p className={`text-xs ${state.ok ? 'text-ats-green' : 'text-ats-red'}`}>{state.message}</p>
+        <p className={`text-xs ${state.ok ? 'text-ats-green-fg' : 'text-ats-red-fg'}`}>{state.message}</p>
       )}
     </form>
   );

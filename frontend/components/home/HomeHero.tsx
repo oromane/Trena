@@ -10,10 +10,11 @@ import { Flame, Watch } from 'lucide-react';
 import type { DashboardOverview } from '@/lib/engine';
 import AskButton from '@/components/advisor/AskButton';
 
-const STATE: Record<string, { label: string; sub: string; color: string }> = {
-  NORMAL: { label: 'Excellent', sub: 'Récupération au rendez-vous', color: '#2E8B57' },
-  CAUTION: { label: 'Vigilance', sub: 'Récupération incomplète', color: '#FF4500' },
-  REDUCE: { label: 'Récupération', sub: 'Fatigue marquée', color: '#DC4437' },
+// `color` : halo et pastille (décor). `text` : libellé, en variante lisible.
+const STATE: Record<string, { label: string; sub: string; color: string; text: string }> = {
+  NORMAL: { label: 'Excellent', sub: 'Récupération au rendez-vous', color: '#2E8B57', text: 'text-ats-green-fg' },
+  CAUTION: { label: 'Vigilance', sub: 'Récupération incomplète', color: '#FF4500', text: 'text-ats-orange-fg' },
+  REDUCE: { label: 'Récupération', sub: 'Fatigue marquée', color: '#DC4437', text: 'text-ats-red-fg' },
 };
 
 export default function HomeHero({
@@ -55,7 +56,7 @@ export default function HomeHero({
               style={{ background: state.color, boxShadow: `0 0 12px ${state.color}` }}
             />
             <span className="text-sm">
-              <span className="font-semibold" style={{ color: state.color }}>
+              <span className={`font-semibold ${state.text}`}>
                 {state.label}
               </span>
               <span className="text-ats-muted"> · {state.sub}</span>
@@ -63,7 +64,7 @@ export default function HomeHero({
           </span>
 
           {data.streak_weeks > 0 && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-ats-orange/25 bg-ats-orange/10 px-3.5 py-2 text-xs font-medium text-ats-orange">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-ats-orange/25 bg-ats-orange/10 px-3.5 py-2 text-xs font-medium text-ats-orange-fg">
               <Flame className="h-3.5 w-3.5" />
               {data.streak_weeks} semaine{data.streak_weeks > 1 ? 's' : ''} d&apos;affilée
             </span>
@@ -72,7 +73,7 @@ export default function HomeHero({
           {!garminLinked && (
             <Link
               href="/profile"
-              className="inline-flex items-center gap-1.5 rounded-full border border-ats-green/30 bg-ats-green/10 px-3.5 py-2 text-xs font-medium text-ats-green transition-colors hover:bg-ats-green/20"
+              className="inline-flex items-center gap-1.5 rounded-full border border-ats-green/30 bg-ats-green/10 px-3.5 py-2 text-xs font-medium text-ats-green-fg transition-colors hover:bg-ats-green/20"
             >
               <Watch className="h-3.5 w-3.5" />
               Lier ma montre

@@ -20,7 +20,7 @@ export default function RichText({ text }: { text: string }) {
         if (!line.trim()) return <div key={i} className="h-2" />;
         return bullet ? (
           <p key={i} className="flex gap-2">
-            <span className="text-ats-green">•</span>
+            <span className="text-ats-green-fg">•</span>
             <span>{inline(line.replace(/^\s*[-*•]\s+/, ''), i)}</span>
           </p>
         ) : (

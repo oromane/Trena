@@ -20,31 +20,31 @@ const KINDS: Record<
   FH: {
     label: 'Force — hypertrophie',
     detail: 'Full-body, 2–3 reps en réserve, repos 60–90 s',
-    cls: 'border-ats-green/30 bg-ats-green/10 text-ats-green',
+    cls: 'border-ats-green/30 bg-ats-green/10 text-ats-green-fg',
     family: 'force',
   },
   FC: {
     label: 'Force — lourd et court',
     detail: '2–3 séries à ≥80 % 1RM, repos 2–3 min, 30 min chrono',
-    cls: 'border-ats-violet/30 bg-ats-violet/10 text-ats-violet',
+    cls: 'border-ats-violet/30 bg-ats-violet/10 text-ats-violet-fg',
     family: 'force',
   },
   EF: {
     label: 'Endurance facile',
     detail: 'Zone 1 — tu dois pouvoir tenir une conversation',
-    cls: 'border-ats-blue/30 bg-ats-blue/10 text-ats-blue',
+    cls: 'border-ats-blue/30 bg-ats-blue/10 text-ats-blue-fg',
     family: 'endurance',
   },
   EI: {
     label: 'Endurance intense',
     detail: 'Fractionné ou seuil — Zone 3',
-    cls: 'border-ats-orange/30 bg-ats-orange/10 text-ats-orange',
+    cls: 'border-ats-orange/30 bg-ats-orange/10 text-ats-orange-fg',
     family: 'endurance',
   },
   EL: {
     label: 'Sortie longue',
     detail: 'Zone 1, durée étendue — oxydation des lipides',
-    cls: 'border-ats-blue/30 bg-ats-blue/10 text-ats-blue',
+    cls: 'border-ats-blue/30 bg-ats-blue/10 text-ats-blue-fg',
     family: 'endurance',
   },
 };
@@ -168,7 +168,7 @@ export default function WeekPlanner() {
                 aria-pressed={n === total}
                 className={`metric h-9 w-10 rounded-xl border text-sm font-semibold transition-colors ${
                   n === total
-                    ? 'border-ats-green/40 bg-ats-green/15 text-ats-green'
+                    ? 'border-ats-green/40 bg-ats-green/15 text-ats-green-fg'
                     : 'border-white/10 text-ats-muted hover:border-white/20 hover:text-ats-text'
                 }`}
               >
@@ -191,7 +191,7 @@ export default function WeekPlanner() {
                 aria-pressed={p.key === priority}
                 className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
                   p.key === priority
-                    ? 'border-ats-green/40 bg-ats-green/15 text-ats-green'
+                    ? 'border-ats-green/40 bg-ats-green/15 text-ats-green-fg'
                     : 'border-white/10 text-ats-muted hover:border-white/20 hover:text-ats-text'
                 }`}
               >
@@ -214,7 +214,7 @@ export default function WeekPlanner() {
                 aria-pressed={s.key === sport}
                 className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
                   s.key === sport
-                    ? 'border-ats-blue/40 bg-ats-blue/15 text-ats-blue'
+                    ? 'border-ats-blue/40 bg-ats-blue/15 text-ats-blue-fg'
                     : 'border-white/10 text-ats-muted hover:border-white/20 hover:text-ats-text'
                 }`}
               >
@@ -256,11 +256,11 @@ export default function WeekPlanner() {
           <p
             key={i}
             className={`flex gap-2.5 text-sm leading-relaxed ${
-              c.ok ? 'text-ats-muted' : 'text-ats-orange'
+              c.ok ? 'text-ats-muted' : 'text-ats-orange-fg'
             }`}
           >
             {c.ok ? (
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-ats-green" />
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-ats-green-fg" />
             ) : (
               <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
             )}
@@ -278,7 +278,7 @@ export default function WeekPlanner() {
       >
         <Info
           className={`mt-0.5 h-4 w-4 shrink-0 ${
-            sportInfo.tone === 'warn' ? 'text-ats-orange' : 'text-ats-blue'
+            sportInfo.tone === 'warn' ? 'text-ats-orange-fg' : 'text-ats-blue-fg'
           }`}
         />
         <p>{sportInfo.note}</p>

@@ -58,7 +58,7 @@ export default function ExerciseInfoCard({
                   {exercise.name}
                 </h2>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  <span className="rounded-full bg-ats-green/10 px-2.5 py-0.5 text-xs font-medium capitalize text-ats-green">
+                  <span className="rounded-full bg-ats-green/10 px-2.5 py-0.5 text-xs font-medium capitalize text-ats-green-fg">
                     Cible : {exercise.muscle_primary}
                   </span>
                   {secondary.map((m) => (
@@ -89,7 +89,7 @@ export default function ExerciseInfoCard({
           <ol className="space-y-2 text-sm text-ats-muted">
             {steps.map((step, i) => (
               <li key={i} className="flex gap-2.5">
-                <span className="metric shrink-0 font-bold text-ats-green">{i + 1}</span>
+                <span className="metric shrink-0 font-bold text-ats-green-fg">{i + 1}</span>
                 <span>{step}</span>
               </li>
             ))}

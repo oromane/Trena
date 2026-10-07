@@ -22,6 +22,13 @@ const config: Config = {
           red: v('ats-red'),
           violet: v('ats-violet'),
           gray: v('ats-gray'),
+          // Texte coloré lisible (contraste AA) : à utiliser pour text-*,
+          // les accents simples restant réservés aux fonds et bordures.
+          'green-fg': v('ats-green-fg'),
+          'blue-fg': v('ats-blue-fg'),
+          'orange-fg': v('ats-orange-fg'),
+          'red-fg': v('ats-red-fg'),
+          'violet-fg': v('ats-violet-fg'),
         },
       },
       fontFamily: {

@@ -69,15 +69,15 @@ export default function LoginPage() {
 
           <ul className="mt-8 space-y-3 text-sm text-ats-muted">
             <li className="flex items-center gap-3">
-              <Activity className="h-4 w-4 text-ats-green" /> Ajustement quotidien selon
+              <Activity className="h-4 w-4 text-ats-green-fg" /> Ajustement quotidien selon
               votre z-score HRV
             </li>
             <li className="flex items-center gap-3">
-              <LineChart className="h-4 w-4 text-ats-green" /> Probabilité de réussite
+              <LineChart className="h-4 w-4 text-ats-green-fg" /> Probabilité de réussite
               projetée jusqu&apos;au jour J
             </li>
             <li className="flex items-center gap-3">
-              <ShieldCheck className="h-4 w-4 text-ats-green" /> Prévention du
+              <ShieldCheck className="h-4 w-4 text-ats-green-fg" /> Prévention du
               surentraînement (HRV + indice de Foster)
             </li>
           </ul>
@@ -134,7 +134,7 @@ export default function LoginPage() {
           </form>
 
           {message && (
-            <p className="mt-4 rounded-lg border border-ats-orange/20 bg-ats-orange/5 px-3 py-2 text-sm text-ats-orange">
+            <p className="mt-4 rounded-lg border border-ats-orange/20 bg-ats-orange/5 px-3 py-2 text-sm text-ats-orange-fg">
               {message}
             </p>
           )}

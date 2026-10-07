@@ -12,12 +12,12 @@
 import { useState } from 'react';
 
 const ZONES = [
-  { n: 1, label: 'Récupération active', lo: 0, hi: 0.55, cls: 'text-ats-blue', bar: 'bg-ats-blue' },
-  { n: 2, label: 'Endurance', lo: 0.56, hi: 0.75, cls: 'text-ats-green', bar: 'bg-ats-green' },
-  { n: 3, label: 'Tempo', lo: 0.76, hi: 0.9, cls: 'text-ats-green', bar: 'bg-ats-greendark' },
-  { n: 4, label: 'Seuil', lo: 0.91, hi: 1.05, cls: 'text-ats-violet', bar: 'bg-ats-violet' },
-  { n: 5, label: 'VO2max', lo: 1.06, hi: 1.2, cls: 'text-ats-orange', bar: 'bg-ats-orange' },
-  { n: 6, label: 'Capacité anaérobie', lo: 1.21, hi: 1.5, cls: 'text-ats-red', bar: 'bg-ats-red' },
+  { n: 1, label: 'Récupération active', lo: 0, hi: 0.55, cls: 'text-ats-blue-fg', bar: 'bg-ats-blue' },
+  { n: 2, label: 'Endurance', lo: 0.56, hi: 0.75, cls: 'text-ats-green-fg', bar: 'bg-ats-green' },
+  { n: 3, label: 'Tempo', lo: 0.76, hi: 0.9, cls: 'text-ats-green-fg', bar: 'bg-ats-greendark' },
+  { n: 4, label: 'Seuil', lo: 0.91, hi: 1.05, cls: 'text-ats-violet-fg', bar: 'bg-ats-violet' },
+  { n: 5, label: 'VO2max', lo: 1.06, hi: 1.2, cls: 'text-ats-orange-fg', bar: 'bg-ats-orange' },
+  { n: 6, label: 'Capacité anaérobie', lo: 1.21, hi: 1.5, cls: 'text-ats-red-fg', bar: 'bg-ats-red' },
 ];
 
 export default function FtpZones() {
@@ -51,7 +51,7 @@ export default function FtpZones() {
         </div>
         <p className="mt-4 flex items-baseline gap-2">
           <span className="text-sm text-ats-muted">FTP estimée</span>
-          <span className="metric text-3xl font-semibold text-ats-green">{ftp}</span>
+          <span className="metric text-3xl font-semibold text-ats-green-fg">{ftp}</span>
           <span className="text-xs text-ats-muted">W</span>
         </p>
       </div>

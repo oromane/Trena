@@ -58,7 +58,7 @@ export default function BottomNav() {
               key={t.label}
               href={t.href}
               className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 px-1 pb-1.5 pt-2 text-[10px] font-medium transition-colors ${
-                active ? 'text-ats-green' : 'text-ats-muted'
+                active ? 'text-ats-green-fg' : 'text-ats-muted'
               }`}
             >
               <Icon className="h-5 w-5 shrink-0" />

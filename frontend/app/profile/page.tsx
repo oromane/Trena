@@ -114,8 +114,8 @@ export default async function ProfilePage({
           <p
             className={`mt-5 rounded-xl border px-4 py-2.5 text-sm ${
               msg.ok
-                ? 'border-ats-green/20 bg-ats-green/5 text-ats-green'
-                : 'border-ats-red/20 bg-ats-red/5 text-ats-red'
+                ? 'border-ats-green/20 bg-ats-green/5 text-ats-green-fg'
+                : 'border-ats-red/20 bg-ats-red/5 text-ats-red-fg'
             }`}
           >
             {msg.text}
@@ -217,8 +217,8 @@ export default async function ProfilePage({
             <p
               className={`mt-4 rounded-xl border px-4 py-2.5 text-sm ${
                 gMsg.ok
-                  ? 'border-ats-green/20 bg-ats-green/5 text-ats-green'
-                  : 'border-ats-red/20 bg-ats-red/5 text-ats-red'
+                  ? 'border-ats-green/20 bg-ats-green/5 text-ats-green-fg'
+                  : 'border-ats-red/20 bg-ats-red/5 text-ats-red-fg'
               }`}
             >
               {gMsg.text}
@@ -233,10 +233,10 @@ export default async function ProfilePage({
                 garmin.last_sync.status === 'running'
                   ? 'border-ats-green/20 bg-ats-green/5 text-ats-muted'
                   : garmin.last_sync.status === 'error'
-                    ? 'border-ats-red/20 bg-ats-red/5 text-ats-red'
+                    ? 'border-ats-red/20 bg-ats-red/5 text-ats-red-fg'
                     : garmin.last_sync.status === 'partial'
-                      ? 'border-ats-orange/20 bg-ats-orange/5 text-ats-orange'
-                      : 'border-ats-green/20 bg-ats-green/5 text-ats-green'
+                      ? 'border-ats-orange/20 bg-ats-orange/5 text-ats-orange-fg'
+                      : 'border-ats-green/20 bg-ats-green/5 text-ats-green-fg'
               }`}
             >
               {garmin.last_sync.status === 'running' ? (
@@ -275,7 +275,7 @@ export default async function ProfilePage({
             {garmin.linked ? (
               <div className="mt-4">
                 <p className="text-sm">
-                  <span className="font-medium text-ats-green">✓ Compte lié</span>
+                  <span className="font-medium text-ats-green-fg">✓ Compte lié</span>
                   <span className="text-ats-muted">
                     {' '}
                     : la sync tourne automatiquement chaque matin avant l&apos;ajustement

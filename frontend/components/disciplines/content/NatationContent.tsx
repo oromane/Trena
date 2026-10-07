@@ -156,7 +156,7 @@ export default function NatationContent() {
         </P>
         <Link
           href="/guide/combiner"
-          className="inline-flex items-center rounded-xl border border-ats-green/30 bg-ats-green/10 px-4 py-2.5 text-sm font-semibold text-ats-green transition-colors hover:bg-ats-green/20"
+          className="inline-flex items-center rounded-xl border border-ats-green/30 bg-ats-green/10 px-4 py-2.5 text-sm font-semibold text-ats-green-fg transition-colors hover:bg-ats-green/20"
         >
           Lire le chapitre Combiner →
         </Link>

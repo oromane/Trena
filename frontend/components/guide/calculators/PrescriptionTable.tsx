@@ -103,23 +103,23 @@ const GOALS: Goal[] = [
 
 const TONE_CLS = {
   green: {
-    active: 'border-ats-green/40 bg-ats-green/15 text-ats-green',
-    accent: 'text-ats-green',
+    active: 'border-ats-green/40 bg-ats-green/15 text-ats-green-fg',
+    accent: 'text-ats-green-fg',
     ring: 'border-ats-green/25 bg-ats-green/[0.06]',
   },
   blue: {
-    active: 'border-ats-blue/40 bg-ats-blue/15 text-ats-blue',
-    accent: 'text-ats-blue',
+    active: 'border-ats-blue/40 bg-ats-blue/15 text-ats-blue-fg',
+    accent: 'text-ats-blue-fg',
     ring: 'border-ats-blue/25 bg-ats-blue/[0.06]',
   },
   orange: {
-    active: 'border-ats-orange/40 bg-ats-orange/15 text-ats-orange',
-    accent: 'text-ats-orange',
+    active: 'border-ats-orange/40 bg-ats-orange/15 text-ats-orange-fg',
+    accent: 'text-ats-orange-fg',
     ring: 'border-ats-orange/25 bg-ats-orange/[0.06]',
   },
   violet: {
-    active: 'border-ats-violet/40 bg-ats-violet/15 text-ats-violet',
-    accent: 'text-ats-violet',
+    active: 'border-ats-violet/40 bg-ats-violet/15 text-ats-violet-fg',
+    accent: 'text-ats-violet-fg',
     ring: 'border-ats-violet/25 bg-ats-violet/[0.06]',
   },
 } as const;

@@ -24,7 +24,7 @@ export default function CopyCode({ code }: { code: string }) {
     >
       <span className="metric text-xl font-semibold tracking-[0.2em] text-ats-text">{pretty}</span>
       {copied ? (
-        <Check className="h-4 w-4 text-ats-green" />
+        <Check className="h-4 w-4 text-ats-green-fg" />
       ) : (
         <Copy className="h-4 w-4 text-ats-gray" />
       )}

@@ -20,28 +20,28 @@ const PACES = [
     lo: 0.6,
     hi: 0.7,
     use: 'Footing de décrassage, très facile',
-    tone: 'text-ats-blue',
+    tone: 'text-ats-blue-fg',
   },
   {
     label: 'Endurance fondamentale',
     lo: 0.7,
     hi: 0.8,
     use: "Le gros du volume — tu dois pouvoir tenir une conversation",
-    tone: 'text-ats-green',
+    tone: 'text-ats-green-fg',
   },
   {
     label: 'Seuil',
     lo: 0.85,
     hi: 0.9,
     use: 'Effort soutenu mais contrôlé, phrases courtes',
-    tone: 'text-ats-violet',
+    tone: 'text-ats-violet-fg',
   },
   {
     label: 'Intervalles VMA',
     lo: 0.95,
     hi: 1.05,
     use: 'Fractionné court, respiration maximale',
-    tone: 'text-ats-orange',
+    tone: 'text-ats-orange-fg',
   },
 ];
 
@@ -78,7 +78,7 @@ export default function VmaCalculator() {
         </div>
         <p className="mt-4 flex items-baseline gap-2">
           <span className="text-sm text-ats-muted">VMA estimée</span>
-          <span className="metric text-3xl font-semibold text-ats-green">
+          <span className="metric text-3xl font-semibold text-ats-green-fg">
             {vma.toFixed(1)}
           </span>
           <span className="text-xs text-ats-muted">km/h</span>

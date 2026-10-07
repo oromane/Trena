@@ -73,7 +73,7 @@ export default function NutritionCalculator() {
                 title={l.desc}
                 className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
                   l.key === load
-                    ? 'border-ats-green/40 bg-ats-green/15 text-ats-green'
+                    ? 'border-ats-green/40 bg-ats-green/15 text-ats-green-fg'
                     : 'border-white/10 text-ats-muted hover:border-white/20 hover:text-ats-text'
                 }`}
               >
@@ -87,7 +87,7 @@ export default function NutritionCalculator() {
 
       <div className="grid gap-px bg-white/5 sm:grid-cols-2">
         <div className="bg-ats-card p-5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ats-green">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ats-green-fg">
             Protéines
           </p>
           <p className="metric mt-2 text-3xl font-semibold text-ats-text">
@@ -106,7 +106,7 @@ export default function NutritionCalculator() {
         </div>
 
         <div className="bg-ats-card p-5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ats-blue">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ats-blue-fg">
             Glucides
           </p>
           <p className="metric mt-2 text-3xl font-semibold text-ats-text">

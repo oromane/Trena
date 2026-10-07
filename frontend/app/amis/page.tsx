@@ -39,7 +39,7 @@ export default async function FriendsPage() {
       <main className="mx-auto max-w-3xl space-y-8 px-4 py-10 sm:px-6">
         <header>
           <h1 className="flex items-center gap-2 text-2xl font-bold">
-            <Users className="h-6 w-6 text-ats-green" /> Amis
+            <Users className="h-6 w-6 text-ats-green-fg" /> Amis
           </h1>
           <p className="mt-1 text-sm text-ats-muted">
             Suivez vos séances mutuelles. Tu choisis ce que tu partages, et rien
@@ -103,7 +103,7 @@ export default async function FriendsPage() {
                     <span className="flex-1 text-sm">{f.name}</span>
                     <form action={removeFriend}>
                       <Hidden id={f.friendship_id} />
-                      <SubmitButton className={`${btn} text-ats-gray hover:text-ats-red`}>Retirer</SubmitButton>
+                      <SubmitButton className={`${btn} text-ats-gray hover:text-ats-red-fg`}>Retirer</SubmitButton>
                     </form>
                   </div>
                 ))}
@@ -123,7 +123,7 @@ export default async function FriendsPage() {
 
             <section className="card space-y-4 p-5">
               <h2 className="flex items-center gap-2 text-sm font-semibold">
-                <ShieldCheck className="h-4 w-4 text-ats-green" /> Ce que tu partages
+                <ShieldCheck className="h-4 w-4 text-ats-green-fg" /> Ce que tu partages
               </h2>
               <form action={saveSharePrefs} className="space-y-3">
                 <label className="flex items-start gap-3 text-sm">

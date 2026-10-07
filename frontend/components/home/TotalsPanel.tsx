@@ -46,18 +46,18 @@ export default function TotalsPanel({ data }: { data: DashboardOverview }) {
           <Stat
             value={String(week.sessions)}
             label="séances réalisées"
-            accent="text-ats-green"
+            accent="text-ats-green-fg"
           />
           <Stat value={fmtDuration(week.minutes)} label="temps d'activité" />
           <Stat
             value={fmtDistance(week.distance_m)}
             label="distance parcourue"
-            accent="text-ats-blue"
+            accent="text-ats-blue-fg"
           />
           <Stat
             value={fmtTonnage(week.tonnage_kg)}
             label="tonnage soulevé"
-            accent="text-ats-violet"
+            accent="text-ats-violet-fg"
           />
         </div>
 

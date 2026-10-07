@@ -74,7 +74,7 @@ export default function VolumeChecker() {
 
               <span
                 className={`metric w-8 text-right text-sm font-semibold ${
-                  reached ? 'text-ats-green' : 'text-ats-orange'
+                  reached ? 'text-ats-green-fg' : 'text-ats-orange-fg'
                 }`}
               >
                 {v}
@@ -106,8 +106,8 @@ export default function VolumeChecker() {
       <div
         className={`flex items-start gap-3 border-t border-white/5 px-5 py-4 text-sm ${
           ok === GROUPS.length
-            ? 'bg-ats-green/[0.07] text-ats-green'
-            : 'bg-ats-orange/[0.07] text-ats-orange'
+            ? 'bg-ats-green/[0.07] text-ats-green-fg'
+            : 'bg-ats-orange/[0.07] text-ats-orange-fg'
         }`}
       >
         {ok === GROUPS.length ? (

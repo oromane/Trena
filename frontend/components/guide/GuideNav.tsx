@@ -52,7 +52,7 @@ export default function GuideNav() {
                 aria-current={active ? 'page' : undefined}
                 className={`shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
                   active
-                    ? 'border-ats-green/40 bg-ats-green/15 text-ats-green'
+                    ? 'border-ats-green/40 bg-ats-green/15 text-ats-green-fg'
                     : 'border-white/10 text-ats-muted hover:border-white/20 hover:text-ats-text'
                 }`}
               >
@@ -65,7 +65,7 @@ export default function GuideNav() {
             aria-current={pathname === SOURCES_PAGE.href ? 'page' : undefined}
             className={`shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
               pathname === SOURCES_PAGE.href
-                ? 'border-ats-blue/40 bg-ats-blue/15 text-ats-blue'
+                ? 'border-ats-blue/40 bg-ats-blue/15 text-ats-blue-fg'
                 : 'border-white/10 text-ats-gray hover:border-white/20 hover:text-ats-text'
             }`}
           >

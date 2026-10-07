@@ -66,7 +66,7 @@ export default function AutresPage() {
                 }`}
               >
                 <Icon
-                  className={`h-5 w-5 ${ready ? 'text-ats-violet' : 'text-ats-gray'}`}
+                  className={`h-5 w-5 ${ready ? 'text-ats-violet-fg' : 'text-ats-gray'}`}
                 />
               </div>
               <div className="min-w-0 flex-1">

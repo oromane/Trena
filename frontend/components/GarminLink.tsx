@@ -137,7 +137,7 @@ export default function GarminLink() {
   if (step === 'loading') {
     return (
       <div className="mt-4 flex flex-col items-center gap-3 py-6">
-        <Loader2 className="h-6 w-6 animate-spin text-ats-green" />
+        <Loader2 className="h-6 w-6 animate-spin text-ats-green-fg" />
         <p className="text-sm text-ats-muted">Connexion à Garmin en cours…</p>
       </div>
     );
@@ -147,8 +147,8 @@ export default function GarminLink() {
   if (step === 'success') {
     return (
       <div className="mt-4 flex flex-col items-center gap-3 py-6">
-        <CheckCircle2 className="h-8 w-8 text-ats-green" />
-        <p className="text-sm font-medium text-ats-green">
+        <CheckCircle2 className="h-8 w-8 text-ats-green-fg" />
+        <p className="text-sm font-medium text-ats-green-fg">
           Compte Garmin lié avec succès !
         </p>
         <p className="text-xs text-ats-muted">Rafraîchissement…</p>
@@ -161,8 +161,8 @@ export default function GarminLink() {
     return (
       <div className="mt-4 space-y-4">
         <div className="flex items-start gap-3 rounded-xl border border-ats-red/20 bg-ats-red/5 px-4 py-3">
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-ats-red" />
-          <p className="text-sm text-ats-red">{error}</p>
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-ats-red-fg" />
+          <p className="text-sm text-ats-red-fg">{error}</p>
         </div>
         <button
           onClick={reset}
@@ -179,8 +179,8 @@ export default function GarminLink() {
     return (
       <form onSubmit={handleMfa} className="mt-4 space-y-4">
         <div className="flex items-start gap-3 rounded-xl border border-ats-blue/20 bg-ats-blue/5 px-4 py-3">
-          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-ats-blue" />
-          <div className="text-sm text-ats-blue">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-ats-blue-fg" />
+          <div className="text-sm text-ats-blue-fg">
             <p className="font-medium">Vérification en 2 étapes</p>
             <p className="mt-1 text-ats-muted">
               Garmin t&apos;a envoyé un code de vérification par email. Saisis-le ci-dessous.
@@ -208,7 +208,7 @@ export default function GarminLink() {
         <div className="flex items-center justify-between">
           <span className="text-xs text-ats-muted">
             Expire dans{' '}
-            <span className={countdown <= 30 ? 'font-semibold text-ats-red' : 'font-medium'}>
+            <span className={countdown <= 30 ? 'font-semibold text-ats-red-fg' : 'font-medium'}>
               {formatTime(countdown)}
             </span>
           </span>
