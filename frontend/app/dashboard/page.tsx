@@ -16,7 +16,8 @@ import ActivityFeed from '@/components/home/ActivityFeed';
 import PhysioGrid from '@/components/dashboard/PhysioGrid';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { ensureProfile } from '@/app/actions';
-import { getAdvisorDaily, getDashboardOverview, getGarminStatus } from '@/lib/engine';
+import { getAdvisorDaily, getDashboardOverview, getGarminStatus, getSocialFeed } from '@/lib/engine';
+import { FriendsCard } from '@/components/social/FriendFeed';
 import DailyCard from '@/components/advisor/DailyCard';
 
 function freshnessLabel(dateStr: string, today: string): string {
@@ -35,11 +36,12 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [overview, { data: profile }, garmin, daily] = await Promise.all([
+  const [overview, { data: profile }, garmin, daily, friends] = await Promise.all([
     getDashboardOverview(user!.id),
     supabase.from('profiles').select('full_name').eq('id', user!.id).maybeSingle(),
     getGarminStatus(user!.id),
     getAdvisorDaily(user!.id),
+    getSocialFeed(user!.id),
   ]);
 
   const rawName = user?.email?.split('@')[0] ?? 'athlète';
@@ -98,6 +100,8 @@ export default async function DashboardPage() {
           <DisciplineTiles data={overview} />
 
           <ActivityFeed data={overview} />
+
+          <FriendsCard friends={friends} today={overview.date} />
 
           {/* ------------------------------------------ passerelle guide */}
           <section>

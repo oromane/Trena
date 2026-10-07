@@ -191,6 +191,17 @@ Mise en place (une fois) : exécuter `sql/migration-014.sql` dans l'éditeur SQL
 Supabase (table `activity_insights`). Sans elle, l'analyse chiffrée s'affiche
 quand même ; seuls les commentaires manquent.
 
+### 6.6 Amis et partage
+
+Page **Amis** : chaque compte a un code ami (8 caractères, sans 0/O/1/I/L).
+Saisir le code d'un ami lui envoie une demande ; rien n'est visible avant
+qu'il l'accepte. Partage par catégorie, réglable par chacun :
+- séances et volume (titre, discipline, durée, distance, analyse) : oui par défaut ;
+- forme du jour (niveau seulement, jamais HRV ni sommeil) : non par défaut.
+
+Mise en place (une fois) : exécuter `sql/migration-015.sql` dans l'éditeur SQL
+Supabase (colonnes de partage sur `profiles`, table `friendships`).
+
 ## 7. Éteindre l'ancien hébergement PC
 
 - Ne lance plus `Trena-tunnel.bat` (l'ancien tunnel local est remplacé).
