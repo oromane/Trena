@@ -30,9 +30,11 @@ class Settings(BaseSettings):
 
     # Conseiller IA local (Ollama, réseau Docker interne uniquement)
     llm_base_url: str = "http://llm:11434"
-    llm_model: str = "qwen3:4b"
+    # Variante instruct obligatoire : « qwen3:4b » seul = variante thinking,
+    # qui raisonne longuement avant de répondre (lent, et fuite du raisonnement).
+    llm_model: str = "qwen3:4b-instruct-2507-q4_K_M"
     llm_timeout_s: float = 90.0
-    llm_max_tokens: int = 350
+    llm_max_tokens: int = 280
     advisor_max_per_hour: int = 20   # par utilisateur
 
     class Config:

@@ -134,8 +134,11 @@ export default function Advisor() {
             const ev = JSON.parse(line);
             if (ev.type === 'meta') {
               patchLast((m) => ({ ...m, mode: ev.mode, sources: ev.sources }));
+            } else if (ev.type === 'reset') {
+              // Raisonnement du modèle diffusé par erreur : on l'efface.
+              patchLast((m) => ({ ...m, text: '' }));
             } else if (ev.type === 'delta') {
-              patchLast((m) => ({ ...m, text: m.text + ev.text }));
+              patchLast((m) => ({ ...m, text: m.text ? m.text + ev.text : ev.text.trimStart() }));
             } else if (ev.type === 'error') {
               patchLast((m) => ({ ...m, error: ev.message }));
             }

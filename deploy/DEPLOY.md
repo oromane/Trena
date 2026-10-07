@@ -129,7 +129,7 @@ Le service `llm` (Ollama) tourne sur le réseau Docker interne, sans port publi�
 seul `performance-engine` l'interroge, et le frontend passe par `/api/advisor`
 (session Supabase obligatoire). Aucune donnée ne quitte le VPS.
 
-- Modèle par défaut : `qwen3:4b` (licence Apache 2.0, ~2,6 Go sur disque,
+- Modèle par défaut : `qwen3:4b-instruct-2507-q4_K_M` (licence Apache 2.0, ~2,6 Go sur disque,
   ~3 Go en RAM). Plafonné à 4 Go et 3 cœurs dans le compose.
 - Premier démarrage : `llm-init` télécharge le modèle puis s'arrête. Suivi :
   `docker compose -f docker-compose.prod.yml logs -f llm-init`
@@ -142,8 +142,12 @@ seul `performance-engine` l'interroge, et le frontend passe par `/api/advisor`
 - Changer de modèle : `LLM_MODEL=...` dans `.env`, puis
   `docker compose -f docker-compose.prod.yml up -d llm-init performance-engine`.
 - Mesurer le débit réel :
-  `docker compose -f docker-compose.prod.yml exec llm ollama run qwen3:4b --verbose "Explique le HRV en 3 phrases."`
-  (ligne `eval rate` en tokens/s ; sous 4 tokens/s, passer à `qwen3:1.7b`).
+  `docker compose -f docker-compose.prod.yml exec llm ollama run qwen3:4b-instruct-2507-q4_K_M --verbose "Explique le HRV en 3 phrases."`
+  (ligne `eval rate` en tokens/s).
+- N'utiliser que des variantes `instruct`. Le tag `qwen3:4b` seul pointe vers la
+  variante `thinking`, qui raisonne à voix haute avant de répondre : 5 à 10 fois
+  plus lente, et le raisonnement s'affichait dans le conseiller.
+- Libérer l'ancien modèle : `docker compose -f docker-compose.prod.yml exec llm ollama rm qwen3:4b`
 - En local, le service est optionnel : `docker compose --profile ai up`.
 
 ## 7. Éteindre l'ancien hébergement PC
