@@ -422,6 +422,34 @@ class SupabaseRepo:
         )
         r.raise_for_status()
 
+    # ---------------------------------------------------------------- advisor
+    def list_users_with_recent_metrics(self, days: int = 3) -> list[str]:
+        """Utilisateurs synchronisés récemment : cible de l'analyse du jour.
+
+        Volontairement indépendant des objectifs : le site ne planifie plus,
+        un utilisateur sans objectif doit quand même recevoir son analyse.
+        """
+        since = (date.today() - timedelta(days=days)).isoformat()
+        rows = self._get("/daily_metrics",
+                         {"recorded_date": f"gte.{since}", "select": "user_id"})
+        return sorted({r["user_id"] for r in rows})
+
+    def get_advisor_daily(self, user_id: str, day: date) -> dict | None:
+        rows = self._get("/advisor_daily", {
+            "user_id": f"eq.{user_id}", "day": f"eq.{day.isoformat()}",
+            "select": "*", "limit": "1",
+        })
+        return rows[0] if rows else None
+
+    def upsert_advisor_daily(self, user_id: str, day: date, text: str,
+                             model: str) -> dict | None:
+        rows = self._post(
+            "/advisor_daily?on_conflict=user_id,day",
+            {"user_id": user_id, "day": day.isoformat(), "text": text, "model": model},
+            headers={"Prefer": "return=representation,resolution=merge-duplicates"},
+        )
+        return rows[0] if rows else None
+
 
 # Singleton paresseux, remplaçable dans les tests via dependency_overrides
 _repo: SupabaseRepo | None = None

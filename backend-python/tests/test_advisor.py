@@ -110,7 +110,7 @@ def test_llm_answer_receives_context_and_extracts(client, repo, monkeypatch):
         return "Ton HRV est dans ta norme."
 
     monkeypatch.setattr(llm, "chat", fake_chat)
-    r = ask(client, "C'est quoi le HRV ?")
+    r = ask(client, "Le HRV baisse-t-il avec l'alcool ?")
     body = r.json()
     assert body["mode"] == "llm"
     assert body["sources"][0]["key"] == "hrv"
@@ -123,7 +123,7 @@ def test_glossary_fallback_when_llm_down(client, repo, monkeypatch):
         raise llm.LLMUnavailable("connexion refusée")
 
     monkeypatch.setattr(llm, "chat", down)
-    r = ask(client, "C'est quoi le HRV ?")
+    r = ask(client, "Le HRV baisse-t-il avec l'alcool ?")
     assert r.status_code == 200
     assert r.json()["mode"] == "glossary"
     assert "rMSSD" in r.json()["answer"]
@@ -160,7 +160,7 @@ def test_stream_yields_meta_deltas_done(client, repo, monkeypatch):
             yield p
 
     monkeypatch.setattr(llm, "chat_stream", fake_stream)
-    ev = _events(stream(client, "C'est quoi le HRV ?"))
+    ev = _events(stream(client, "Le HRV baisse-t-il avec l'alcool ?"))
     assert ev[0]["type"] == "meta" and ev[0]["mode"] == "llm"
     assert ev[0]["sources"][0]["key"] == "hrv"
     assert "".join(e["text"] for e in ev if e["type"] == "delta") == "Ton HRV est stable."
@@ -173,9 +173,10 @@ def test_stream_falls_back_to_glossary(client, repo, monkeypatch):
         yield  # pragma: no cover  (générateur)
 
     monkeypatch.setattr(llm, "chat_stream", down)
-    ev = _events(stream(client, "C'est quoi le HRV ?"))
-    assert ev[0]["mode"] == "glossary"
-    assert "rMSSD" in ev[1]["text"]
+    ev = _events(stream(client, "Le HRV baisse-t-il avec l'alcool ?"))
+    metas = [e for e in ev if e["type"] == "meta"]
+    assert metas[-1]["mode"] == "glossary"   # remplace le « llm » annoncé
+    assert "rMSSD" in next(e["text"] for e in ev if e["type"] == "delta")
     assert ev[-1]["type"] == "done"
 
 
@@ -186,7 +187,7 @@ def test_stream_error_when_down_and_off_topic(client, repo, monkeypatch):
 
     monkeypatch.setattr(llm, "chat_stream", down)
     ev = _events(stream(client, "recette de crêpes"))
-    assert ev == [{"type": "error", "message": "Conseiller momentanément indisponible."}]
+    assert ev[-1] == {"type": "error", "message": "Conseiller momentanément indisponible."}
 
 
 def test_stream_safety_short_circuits(client, repo, monkeypatch):
@@ -290,7 +291,7 @@ def test_stream_emits_reset_for_leaked_reasoning(client, repo, monkeypatch):
              {"message": {"content": "</think>Ton HRV est bas."}, "done": True}]
     body = "\n".join(_json.dumps(x) for x in lines).encode()
     _mock_ollama(monkeypatch, lambda req: httpx.Response(200, content=body))
-    ev = _events(stream(client, "C'est quoi le HRV ?"))
+    ev = _events(stream(client, "Le HRV baisse-t-il avec l'alcool ?"))
     types = [e["type"] for e in ev]
     assert types == ["meta", "delta", "reset", "delta", "done"]
     assert ev[3]["text"] == "Ton HRV est bas."
@@ -299,3 +300,100 @@ def test_stream_emits_reset_for_leaked_reasoning(client, repo, monkeypatch):
 def test_default_model_is_instruct_variant():
     # « qwen3:4b » seul pointe vers la variante thinking (lente, raisonnement visible).
     assert "instruct" in settings.llm_model
+
+
+# ------------------------------------------------------------ aiguillage
+from app.advisor import daily as daily_mod  # noqa: E402
+from app.advisor.intent import classify  # noqa: E402
+
+
+@pytest.mark.parametrize("question,hit,expected", [
+    ("C'est quoi le HRV ?", True, "definition"),
+    ("Que veut dire l'ACWR ?", True, "definition"),
+    ("Pourquoi alterner jours durs et faciles ?", True, "definition"),
+    ("Que dit mon HRV d'aujourd'hui sur ma récupération ?", True, "today"),
+    ("Comment je récupère ce matin ?", True, "today"),
+    ("Suis-je prêt pour un fractionné ?", False, "today"),
+    ("Le HRV baisse-t-il avec l'alcool ?", True, "open"),
+    ("Quel plan pour un semi en 1h30 ?", False, "open"),
+    ("C'est quoi une recette de crêpes ?", False, "open"),
+])
+def test_classify(question, hit, expected):
+    assert classify(question, has_glossary_hit=hit) == expected
+
+
+def test_definition_is_instant_without_llm(client, repo, monkeypatch):
+    called = MagicMock()
+    monkeypatch.setattr(llm, "chat_stream", called)
+    ev = _events(stream(client, "C'est quoi le HRV ?"))
+    assert ev[0]["mode"] == "definition"
+    assert "rMSSD" in ev[1]["text"]
+    called.assert_not_called()
+
+
+def test_today_uses_stored_daily_analysis(client, repo, monkeypatch):
+    called = MagicMock()
+    monkeypatch.setattr(llm, "chat_stream", called)
+    repo.get_advisor_daily.return_value = {"text": "Analyse de 6h.", "generated_at": "x"}
+    ev = _events(stream(client, "Comment je récupère ce matin ?"))
+    assert ev[0]["mode"] == "daily" and ev[1]["text"] == "Analyse de 6h."
+    called.assert_not_called()
+
+
+def test_today_falls_back_to_summary(client, repo, monkeypatch):
+    repo.get_advisor_daily.return_value = None
+    ev = _events(stream(client, "Comment je récupère ce matin ?"))
+    assert ev[0]["mode"] == "summary"
+    assert "synchronise ta montre" in ev[1]["text"]   # aucune métrique en base
+
+
+def test_today_summary_survives_missing_table(client, repo):
+    repo.get_advisor_daily.side_effect = RuntimeError("relation advisor_daily does not exist")
+    r = client.get("/advisor/daily", headers=HEADERS, params={"user_id": "u1"})
+    assert r.status_code == 200 and r.json()["source"] == "summary"
+
+
+def test_summarize_with_full_context():
+    ctx = {
+        "hrv_ms": {"aujourd_hui": 68.0, "norme_28j": 90.4, "ecart_pct": -24.8},
+        "sommeil_heures": {"aujourd_hui": 7.1, "norme_28j": 7.4, "ecart_pct": -4.0},
+        "fc_repos_bpm": {"aujourd_hui": 52, "norme_28j": 50, "ecart_pct": 4.0},
+        "disponibilite": {"niveau": "CAUTION", "z_score_hrv": -1.39,
+                          "detail": "HRV sous ta norme : intensité plafonnée aujourd'hui."},
+    }
+    text = daily_mod.summarize(ctx)
+    assert "HRV : 68 ms pour une norme de 90 ms (-25 %), z-score -1,39." in text
+    assert "Sommeil : 7,1 h (norme 7,4 h)." in text
+    assert "**Vigilance** : Garde le volume mais plafonne l'intensité" in text
+    assert text.count("plafonn") == 1
+
+
+def test_daily_run_queues_and_generates(client, repo, monkeypatch):
+    repo.list_users_with_recent_metrics.return_value = ["u1", "u2"]
+    seen = []
+
+    async def fake_chat(system, user, **kw):
+        seen.append(kw)
+        return "Analyse."
+
+    monkeypatch.setattr(llm, "chat", fake_chat)
+    r = client.post("/advisor/daily/run", headers=HEADERS, json={})
+    assert r.status_code == 202 and r.json() == {"queued": 2}
+    # TestClient exécute les BackgroundTasks avant de rendre la main
+    assert repo.upsert_advisor_daily.call_count == 2
+    assert seen[0]["timeout_s"] >= 300
+
+
+def test_daily_run_continues_after_a_failure(client, repo, monkeypatch):
+    repo.list_users_with_recent_metrics.return_value = ["u1", "u2"]
+    calls = {"n": 0}
+
+    async def flaky(system, user, **kw):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise llm.LLMUnavailable("timeout")
+        return "Analyse."
+
+    monkeypatch.setattr(llm, "chat", flaky)
+    client.post("/advisor/daily/run", headers=HEADERS, json={})
+    assert repo.upsert_advisor_daily.call_count == 1

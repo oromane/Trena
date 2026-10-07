@@ -16,7 +16,8 @@ import ActivityFeed from '@/components/home/ActivityFeed';
 import PhysioGrid from '@/components/dashboard/PhysioGrid';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { ensureProfile } from '@/app/actions';
-import { getDashboardOverview, getGarminStatus } from '@/lib/engine';
+import { getAdvisorDaily, getDashboardOverview, getGarminStatus } from '@/lib/engine';
+import DailyCard from '@/components/advisor/DailyCard';
 
 function freshnessLabel(dateStr: string, today: string): string {
   const diff = Math.round(
@@ -34,10 +35,11 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [overview, { data: profile }, garmin] = await Promise.all([
+  const [overview, { data: profile }, garmin, daily] = await Promise.all([
     getDashboardOverview(user!.id),
     supabase.from('profiles').select('full_name').eq('id', user!.id).maybeSingle(),
     getGarminStatus(user!.id),
+    getAdvisorDaily(user!.id),
   ]);
 
   const rawName = user?.email?.split('@')[0] ?? 'athlète';
@@ -67,6 +69,8 @@ export default async function DashboardPage() {
         <HomeHero name={name} data={overview} garminLinked={garmin.linked} />
 
         <div className="mx-auto max-w-6xl space-y-12 px-4 py-10 sm:px-6 2xl:max-w-[88rem]">
+          {daily && <DailyCard daily={daily} />}
+
           {/* ------------------------------------------ état physiologique */}
           <section>
             <h2 className="mb-3 text-[11px] font-medium uppercase tracking-[0.25em] text-ats-gray">

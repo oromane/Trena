@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     # Variante instruct obligatoire : « qwen3:4b » seul = variante thinking,
     # qui raisonne longuement avant de répondre (lent, et fuite du raisonnement).
     llm_model: str = "qwen3:4b-instruct-2507-q4_K_M"
-    llm_timeout_s: float = 90.0
+    llm_timeout_s: float = 180.0   # délai max entre deux morceaux (CPU lent)
     llm_max_tokens: int = 280
     advisor_max_per_hour: int = 20   # par utilisateur
 

@@ -11,9 +11,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Send, Square, X } from 'lucide-react';
 import Mascot, { MascotAvatar } from '@/components/brand/Mascot';
+import RichText from './RichText';
 import { ADVISOR_EVENT } from './ask';
 
-type Mode = 'llm' | 'glossary' | 'safety';
+type Mode = 'llm' | 'definition' | 'daily' | 'summary' | 'glossary' | 'safety';
 type Source = { key: string; term: string };
 type Message =
   | { role: 'user'; text: string }
@@ -34,41 +35,17 @@ const SUGGESTIONS = [
   'Pourquoi alterner jours durs et faciles ?',
 ];
 
-const MODE_LABEL: Record<Mode, string | null> = {
+// Provenance de la réponse : l'utilisateur sait si c'est instantané ou rédigé
+// par l'IA locale (lente sur le CPU du VPS).
+const MODE_LABEL: Record<Mode, { text: string; tone: string } | null> = {
   llm: null,
-  glossary: 'Définition de référence (IA indisponible)',
-  safety: 'Message de sécurité',
+  definition: { text: 'Définition · réponse instantanée', tone: 'text-ats-gray' },
+  daily: { text: 'Analyse du jour · rédigée ce matin', tone: 'text-ats-gray' },
+  summary: { text: 'Synthèse du jour · calculée par Trena', tone: 'text-ats-gray' },
+  glossary: { text: 'Définition de référence (IA indisponible)', tone: 'text-ats-orange' },
+  safety: { text: 'Message de sécurité', tone: 'text-ats-orange' },
 };
 
-/** Rendu minimal : paragraphes, puces « - », et **gras**. */
-function RichText({ text }: { text: string }) {
-  const inline = (s: string, k: number) =>
-    s.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
-      part.startsWith('**') && part.endsWith('**') ? (
-        <strong key={`${k}-${i}`} className="font-semibold text-ats-text">
-          {part.slice(2, -2)}
-        </strong>
-      ) : (
-        <span key={`${k}-${i}`}>{part}</span>
-      )
-    );
-  return (
-    <>
-      {text.split('\n').map((line, i) => {
-        const bullet = /^\s*[-*•]\s+/.test(line);
-        if (!line.trim()) return <div key={i} className="h-2" />;
-        return bullet ? (
-          <p key={i} className="flex gap-2">
-            <span className="text-ats-green">•</span>
-            <span>{inline(line.replace(/^\s*[-*•]\s+/, ''), i)}</span>
-          </p>
-        ) : (
-          <p key={i}>{inline(line, i)}</p>
-        );
-      })}
-    </>
-  );
-}
 
 export default function Advisor() {
   const [open, setOpen] = useState(false);
@@ -260,13 +237,17 @@ export default function Advisor() {
                 />
                 <div className="max-w-[88%] space-y-1.5 rounded-2xl rounded-bl-md bg-ats-card2 px-3.5 py-2.5 leading-relaxed text-ats-muted">
                   {m.mode && MODE_LABEL[m.mode] && (
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-ats-orange">
-                      {MODE_LABEL[m.mode]}
+                    <p className={`text-[10px] font-medium uppercase tracking-wider ${MODE_LABEL[m.mode]!.tone}`}>
+                      {MODE_LABEL[m.mode]!.text}
                     </p>
                   )}
                   {m.text && <RichText text={m.text} />}
                   {m.pending && !m.text && (
-                    <p className="text-xs text-ats-gray">Perlo analyse tes données…</p>
+                    <p className="text-xs text-ats-gray">
+                      {m.mode === 'llm'
+                        ? "Question libre : l'IA locale rédige ta réponse, compte 1 à 2 minutes."
+                        : 'Perlo analyse tes données…'}
+                    </p>
                   )}
                   {m.error && <p className="text-xs text-ats-red">{m.error}</p>}
                   {!m.pending && m.sources && m.sources.length > 0 && (
