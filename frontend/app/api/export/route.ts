@@ -1,34 +1,32 @@
 /**
  * Export complet des données de l'utilisateur connecté (JSON téléchargeable).
- * RLS Supabase : seules les lignes de l'utilisateur sont accessibles.
+ * Servi par le moteur (P0-2) : profil, objectifs, métriques, bien-être et
+ * séances. Les jetons Garmin/Google chiffrés ne sont jamais exportés.
  */
 import { NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 
+const ENGINE_URL = process.env.PERFORMANCE_ENGINE_URL ?? 'http://performance-engine:8000';
+const INTERNAL_KEY = process.env.INTERNAL_API_KEY ?? '';
+
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
-  const [profile, objectives, metrics, sessions] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
-    supabase.from('objectives').select('*').eq('user_id', user.id)
-      .order('target_date', { ascending: true }),
-    supabase.from('daily_metrics').select('*').eq('user_id', user.id)
-      .order('recorded_date', { ascending: true }),
-    supabase.from('training_sessions').select('*').eq('user_id', user.id)
-      .order('scheduled_date', { ascending: true }),
-  ]);
-
-  const payload = {
-    exported_at: new Date().toISOString(),
-    app: 'Trena',
-    user: { id: user.id, email: user.email },
-    profile: profile.data,
-    objectives: objectives.data ?? [],
-    daily_metrics: metrics.data ?? [],
-    training_sessions: sessions.data ?? [],
-  };
+  const res = await fetch(
+    `${ENGINE_URL}/profile/export?user_id=${encodeURIComponent(user.id)}`,
+    { headers: { 'X-Internal-Key': INTERNAL_KEY }, cache: 'no-store' }
+  );
+  if (!res.ok) {
+    return NextResponse.json({ error: 'Export momentanément indisponible.' }, { status: 502 });
+  }
+  const data = await res.json();
+  const payload = { ...data, user: { id: user.id, email: user.email } };
 
   return new NextResponse(JSON.stringify(payload, null, 2), {
     headers: {

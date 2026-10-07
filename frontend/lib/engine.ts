@@ -224,3 +224,34 @@ export async function getSocialFeed(userId: string): Promise<FriendFeedItem[]> {
   );
   return r?.friends ?? [];
 }
+
+// ---------------------------------------------------------------- profil
+export interface ProfileData {
+  full_name: string | null;
+  sessions_per_week: number | null;
+  hr_max: number | null;
+  hr_rest: number | null;
+  sex: 'M' | 'F' | null;
+  share_activities: boolean | null;
+  share_physio: boolean | null;
+}
+
+export interface DailyMetricRow {
+  recorded_date: string;
+  hrv_ms: number | null;
+  sleep_minutes: number | null;
+  resting_heart_rate: number | null;
+  stress_score?: number | null;
+}
+
+export function getProfile(userId: string) {
+  return engineGet<ProfileData>(`/profile?user_id=${encodeURIComponent(userId)}`);
+}
+
+export async function getRecentMetrics(userId: string, limit = 14): Promise<DailyMetricRow[]> {
+  return (
+    (await engineGet<DailyMetricRow[]>(
+      `/profile/metrics?user_id=${encodeURIComponent(userId)}&limit=${limit}`
+    )) ?? []
+  );
+}
