@@ -14,6 +14,7 @@ from .routers import dashboard as dashboard_router
 from .routers import disciplines as disciplines_router
 from .routers import garmin as garmin_router
 from .routers import ingest as ingest_router
+from .routers import profile as profile_router
 from .routers import social as social_router
 from .routers import strength as strength_router
 from .models import (
@@ -37,6 +38,7 @@ app.include_router(dashboard_router.router)
 app.include_router(garmin_router.router)
 app.include_router(strength_router.router)
 app.include_router(social_router.router)
+app.include_router(profile_router.router)
 app.include_router(disciplines_router.router)
 
 

@@ -14,7 +14,6 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { createSupabaseBrowser } from '@/lib/supabase/client';
 
 type Source = 'metrics' | 'wellness';
 
@@ -42,20 +41,19 @@ export default function TrendsChart() {
   const [wellness, setWellness] = useState<Record<string, unknown>[]>([]);
 
   useEffect(() => {
-    const supabase = createSupabaseBrowser();
-    const since = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
-    supabase
-      .from('daily_metrics')
-      .select('recorded_date,hrv_ms,resting_heart_rate,sleep_minutes')
-      .gte('recorded_date', since)
-      .order('recorded_date')
-      .then(({ data }) => setMetrics(data ?? []));
-    supabase
-      .from('garmin_wellness')
-      .select('*')
-      .gte('recorded_date', since)
-      .order('recorded_date')
-      .then(({ data }) => setWellness(data ?? []));
+    // Via le moteur (P0-2) : plus aucune lecture de table depuis le navigateur.
+    let alive = true;
+    fetch('/api/trends', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : { metrics: [], wellness: [] }))
+      .then((d) => {
+        if (!alive) return;
+        setMetrics(d.metrics ?? []);
+        setWellness(d.wellness ?? []);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const data = useMemo(() => {

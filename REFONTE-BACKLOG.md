@@ -21,7 +21,7 @@
 - Un dashboard/log permet de voir la dernière synchro et son résultat.
 **Dépendances.** Aucune. **À faire en premier** (débloque le diagnostic de tout le reste).
 
-### P0-2 · Unifier le plan d'accès aux données — **L**
+### P0-2 · Unifier le plan d'accès aux données — **L** — ✅ FAIT (oct. 2026)
 **Problème.** Double source de vérité : le frontend lit Supabase en direct (JWT+RLS) pour objectifs/profil, le moteur lit en `service_role` pour le dashboard. Deux clés, deux modèles de confiance → bug « frontend voit 2 objectifs, moteur en voit 0 » (clé `service_role` = `anon`). Reviendra tant que l'accès est dédoublé.
 **Solution.** Le **moteur possède toutes les lectures/écritures métier** ; le frontend ne fait que l'authentification Supabase et appelle le moteur. Supprimer les `supabase.from('objectives'/'profiles'…)` côté frontend au profit d'endpoints moteur.
 **Critères d'acceptation.**
@@ -29,6 +29,7 @@
 - La création/édition d'objectif et la lecture dashboard passent par le même chemin.
 - Un test d'intégration vérifie la cohérence objectifs (UI = moteur).
 **Dépendances.** P0-1 (observabilité) recommandé avant.
+**Réalisé.** Routes moteur `/profile` (lecture, ensure, update en liste blanche validée, métriques, tendances, export) ; actions, pages, graphique de tendances et export migrés ; garde-fou CI qui refuse tout `.from('…')` dans le frontend. Corrigé au passage : la saisie manuelle d'une métrique n'efface plus les autres valeurs Garmin, et l'appel mort à `/plan/generate` est retiré.
 
 ### P0-3 · Synchro Garmin en job de fond — **L** — ✅ FAIT (Sprint 2)
 **Problème.** La synchro est **inline dans la requête HTTP** (jusqu'à 60 j × N appels Garmin + 1 appel de détail par activité) → risque de timeout et de rate-limit, sans retry ni idempotence (hors index unique).

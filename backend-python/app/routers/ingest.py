@@ -26,7 +26,9 @@ class IngestRequest(BaseModel):
 
 @router.post("/daily-metrics")
 def ingest_daily_metrics(req: IngestRequest, repo: SupabaseRepo = Depends(get_repo)) -> dict:
-    rows = [m.model_dump(mode="json") for m in req.metrics]
+    # Seuls les champs fournis sont écrits : un champ absent ne doit pas
+    # effacer une valeur synchronisée par Garmin (upsert merge-duplicates).
+    rows = [m.model_dump(mode="json", exclude_unset=True) for m in req.metrics]
     try:
         saved = repo.upsert_daily_metrics(req.user_id, rows)
     except Exception as e:  # httpx.HTTPStatusError et erreurs réseau

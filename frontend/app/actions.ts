@@ -30,31 +30,34 @@ async function engineFetch(path: string, body: unknown) {
 
 /** Crée le profil s'il n'existe pas (appelé au premier accès dashboard). */
 export async function ensureProfile() {
-  const { supabase, user } = await requireUser();
-  const { data } = await supabase.from('profiles').select('id').eq('id', user.id).maybeSingle();
-  if (!data) {
-    await supabase.from('profiles').insert({
-      id: user.id,
-      weekly_availability_mask: [60, 60, 60, 60, 60, 120, 120],
-    });
-  }
+  const { user } = await requireUser();
+  await engineFetch('/profile/ensure', { user_id: user.id });
+}
+
+/** Valeur numérique d'un champ, ou undefined s'il est vide (champ non envoyé). */
+function num(formData: FormData, key: string): number | undefined {
+  const v = formData.get(key);
+  return v === null || v === '' ? undefined : Number(v);
+}
+
+/** Valeur numérique, ou null s'il est vide (le champ est effacé). */
+function numOrNull(formData: FormData, key: string): number | null {
+  return num(formData, key) ?? null;
 }
 
 export async function saveDailyMetrics(formData: FormData) {
-  const { supabase, user } = await requireUser();
-  const { error } = await supabase.from('daily_metrics').upsert(
-    {
-      user_id: user.id,
+  const { user } = await requireUser();
+  // Seuls les champs remplis sont envoyés : un champ vide n'efface pas la
+  // valeur synchronisée par Garmin.
+  const metric = Object.fromEntries(
+    Object.entries({
       recorded_date: String(formData.get('recorded_date')),
-      hrv_ms: formData.get('hrv_ms') ? Number(formData.get('hrv_ms')) : null,
-      sleep_minutes: formData.get('sleep_minutes') ? Number(formData.get('sleep_minutes')) : null,
-      resting_heart_rate: formData.get('resting_heart_rate')
-        ? Number(formData.get('resting_heart_rate'))
-        : null,
-    },
-    { onConflict: 'user_id,recorded_date' }
+      hrv_ms: num(formData, 'hrv_ms'),
+      sleep_minutes: num(formData, 'sleep_minutes'),
+      resting_heart_rate: num(formData, 'resting_heart_rate'),
+    }).filter(([, v]) => v !== undefined)
   );
-  if (error) throw new Error(error.message);
+  await engineFetch('/ingest/daily-metrics', { user_id: user.id, metrics: [metric] });
   revalidatePath('/profile');
   revalidatePath('/dashboard');
 }
@@ -65,32 +68,25 @@ export async function saveDailyMetrics(formData: FormData) {
 
 // ------------------------------------------------------------------ Profil
 export async function updateProfile(formData: FormData) {
-  const { supabase, user } = await requireUser();
-  const { error } = await supabase
-    .from('profiles')
-    .update({
-      full_name: String(formData.get('full_name') ?? '').trim() || null,
-      sessions_per_week: formData.get('sessions_per_week')
-        ? Number(formData.get('sessions_per_week'))
-        : null,
-    })
-    .eq('id', user.id);
-  if (error) throw new Error(error.message);
-
-  // Le nombre de séances/semaine ne vaut que si le plan est régénéré :
-  // on le fait automatiquement (best effort, silencieux sans objectif actif).
-  let flag = 'profile_saved';
-  if (formData.get('sessions_per_week')) {
-    try {
-      await engineFetch('/plan/generate', { user_id: user.id, persist: true });
-      flag = 'profile_saved_plan';
-    } catch {
-      flag = 'profile_saved_noplan';
-    }
-  }
+  const { user } = await requireUser();
+  const ok = await saveProfileFields(user.id, {
+    full_name: String(formData.get('full_name') ?? ''),
+    sessions_per_week: numOrNull(formData, 'sessions_per_week'),
+  });
   revalidatePath('/profile');
   revalidatePath('/dashboard');
-  redirect(`/profile?status=${flag}`);
+  redirect(`/profile?status=${ok ? 'profile_saved' : 'profile_invalid'}`);
+}
+
+/** Écrit via le moteur (liste blanche + validation). false si refusé (422). */
+async function saveProfileFields(userId: string, fields: Record<string, unknown>) {
+  try {
+    await engineFetch('/profile/update', { user_id: userId, ...fields });
+    return true;
+  } catch (e) {
+    console.error('profile update refused:', e);
+    return false;
+  }
 }
 
 export async function updateEmail(formData: FormData) {
@@ -161,18 +157,15 @@ export async function importGarminActivities() {
 
 /** Paramètres cardiaques du profil (TRIMP réel : FC max, FC repos, sexe). */
 export async function updateHeartProfile(formData: FormData) {
-  const { supabase, user } = await requireUser();
-  const { error } = await supabase
-    .from('profiles')
-    .update({
-      hr_max: formData.get('hr_max') ? Number(formData.get('hr_max')) : null,
-      hr_rest: formData.get('hr_rest') ? Number(formData.get('hr_rest')) : null,
-      sex: formData.get('sex') ? String(formData.get('sex')) : null,
-    })
-    .eq('id', user.id);
-  if (error) throw new Error(error.message);
+  const { user } = await requireUser();
+  const sex = String(formData.get('sex') ?? '');
+  const ok = await saveProfileFields(user.id, {
+    hr_max: numOrNull(formData, 'hr_max'),
+    hr_rest: numOrNull(formData, 'hr_rest'),
+    sex: sex === 'M' || sex === 'F' ? sex : null,
+  });
   revalidatePath('/profile');
-  redirect('/profile?status=profile_saved');
+  redirect(`/profile?status=${ok ? 'profile_saved' : 'profile_invalid'}`);
 }
 
 export async function signOut() {

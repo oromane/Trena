@@ -16,7 +16,13 @@ import ActivityFeed from '@/components/home/ActivityFeed';
 import PhysioGrid from '@/components/dashboard/PhysioGrid';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { ensureProfile } from '@/app/actions';
-import { getAdvisorDaily, getDashboardOverview, getGarminStatus, getSocialFeed } from '@/lib/engine';
+import {
+  getAdvisorDaily,
+  getDashboardOverview,
+  getGarminStatus,
+  getProfile,
+  getSocialFeed,
+} from '@/lib/engine';
 import { FriendsCard } from '@/components/social/FriendFeed';
 import DailyCard from '@/components/advisor/DailyCard';
 
@@ -36,9 +42,9 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [overview, { data: profile }, garmin, daily, friends] = await Promise.all([
+  const [overview, profile, garmin, daily, friends] = await Promise.all([
     getDashboardOverview(user!.id),
-    supabase.from('profiles').select('full_name').eq('id', user!.id).maybeSingle(),
+    getProfile(user!.id),
     getGarminStatus(user!.id),
     getAdvisorDaily(user!.id),
     getSocialFeed(user!.id),

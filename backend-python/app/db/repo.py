@@ -75,6 +75,36 @@ class SupabaseRepo:
         rows = self._patch("/profiles", {"id": f"eq.{user_id}"}, fields)
         return rows[0] if rows else None
 
+    def create_profile(self, user_id: str) -> dict | None:
+        """Profil par défaut ; sans effet s'il existe déjà (idempotent)."""
+        rows = self._post(
+            "/profiles?on_conflict=id",
+            {"id": user_id, "weekly_availability_mask": [60, 60, 60, 60, 60, 120, 120]},
+            headers={"Prefer": "return=representation,resolution=ignore-duplicates"},
+        )
+        return rows[0] if rows else None
+
+    EXPORT_PAGE = 1000   # = plafond max_rows par défaut de Supabase
+
+    def export_table(self, table: str, user_id: str, order: str,
+                     user_col: str = "user_id") -> list[dict]:
+        """Toutes les lignes d'un utilisateur (export RGPD).
+
+        Paginé : Supabase tronque silencieusement au-delà de max_rows (1 000
+        par défaut), ce qui couperait l'historique sans erreur visible.
+        """
+        out: list[dict] = []
+        offset = 0
+        while True:
+            page = self._get(f"/{table}", {user_col: f"eq.{user_id}", "select": "*",
+                                           "order": f"{order},id.asc",
+                                           "limit": str(self.EXPORT_PAGE),
+                                           "offset": str(offset)})
+            out.extend(page)
+            if len(page) < self.EXPORT_PAGE:
+                return out
+            offset += self.EXPORT_PAGE
+
     def list_active_user_ids(self) -> list[str]:
         rows = self._get(
             "/objectives", {"is_active": "eq.true", "select": "user_id"}

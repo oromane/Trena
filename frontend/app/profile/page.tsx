@@ -25,17 +25,13 @@ import {
   updateProfile,
 } from '@/app/actions';
 import { createSupabaseServer } from '@/lib/supabase/server';
-import { getGarminStatus } from '@/lib/engine';
+import { getGarminStatus, getProfile, getRecentMetrics } from '@/lib/engine';
 
 const MESSAGES: Record<string, { text: string; ok: boolean }> = {
   profile_saved: { text: 'Profil mis à jour.', ok: true },
-  profile_saved_plan: {
-    text: 'Profil mis à jour : le plan a été régénéré avec ton nombre de séances/semaine.',
-    ok: true,
-  },
-  profile_saved_noplan: {
-    text: 'Profil mis à jour. Le plan sera appliqué dès qu’un objectif actif existe (ou régénère-le depuis le dashboard).',
-    ok: true,
+  profile_invalid: {
+    text: 'Valeurs refusées : vérifie les plages (FC max 100-230, FC repos 25-120 et inférieure à la FC max).',
+    ok: false,
   },
   email_pending: {
     text: 'Vérifie ta boîte mail : un lien de confirmation a été envoyé à la nouvelle adresse.',
@@ -94,18 +90,9 @@ export default async function ProfilePage({
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [{ data: profile }, { data: metrics }, garmin] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select('full_name, sessions_per_week, hr_max, hr_rest, sex')
-      .eq('id', user!.id)
-      .maybeSingle(),
-    supabase
-      .from('daily_metrics')
-      .select('*')
-      .eq('user_id', user!.id)
-      .order('recorded_date', { ascending: false })
-      .limit(14),
+  const [profile, metrics, garmin] = await Promise.all([
+    getProfile(user!.id),
+    getRecentMetrics(user!.id, 14),
     getGarminStatus(user!.id),
   ]);
 
@@ -373,7 +360,7 @@ export default async function ProfilePage({
               </thead>
               <tbody className="metric">
                 {(metrics ?? []).map((m) => (
-                  <tr key={m.id} className="border-b border-white/5">
+                  <tr key={m.recorded_date} className="border-b border-white/5">
                     <td className="py-2">{m.recorded_date}</td>
                     <td>{m.hrv_ms ?? '—'}</td>
                     <td>

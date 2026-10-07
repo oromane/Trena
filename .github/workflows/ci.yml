@@ -47,3 +47,12 @@ jobs:
 
       - name: Type-check
         run: npx tsc --noEmit
+
+      # P0-2 : le frontend ne lit ni n'écrit aucune table métier. Supabase n'y
+      # sert qu'à l'authentification ; tout le reste passe par le moteur.
+      - name: Aucun accès direct aux tables Supabase
+        run: |
+          if grep -rnE "\.from\(['\"\`]" app components lib --include=*.ts --include=*.tsx; then
+            echo "::error::Accès direct à une table Supabase : passer par une route du moteur (P0-2)."
+            exit 1
+          fi
