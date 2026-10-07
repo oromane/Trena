@@ -9,7 +9,8 @@
  * (métriques du jour, norme 28 j, readiness) à chaque appel.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Bot, Loader2, Send, Square, X } from 'lucide-react';
+import { Send, Square, X } from 'lucide-react';
+import Mascot, { MascotAvatar } from '@/components/brand/Mascot';
 import { ADVISOR_EVENT } from './ask';
 
 type Mode = 'llm' | 'glossary' | 'safety';
@@ -183,10 +184,11 @@ export default function Advisor() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          aria-label="Ouvrir le conseiller"
-          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-ats-green text-white shadow-lg transition-transform hover:scale-105 md:bottom-6 md:right-6"
+          aria-label="Ouvrir le conseiller Perlo"
+          title="Une question ? Demande à Perlo"
+          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 rounded-full shadow-lg ring-2 ring-ats-green ring-offset-2 ring-offset-ats-bg transition-transform hover:scale-105 md:bottom-6 md:right-6"
         >
-          <Bot className="h-5 w-5" />
+          <MascotAvatar size={52} />
         </button>
       )}
 
@@ -198,9 +200,13 @@ export default function Advisor() {
           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         >
           <header className="flex items-center gap-2 border-b border-white/5 px-4 py-3">
-            <Bot className="h-4 w-4 text-ats-green" />
-            <span className="text-sm font-semibold">Conseiller</span>
-            <span className="text-[10px] uppercase tracking-wider text-ats-gray">IA locale</span>
+            <MascotAvatar size={30} mood={busy ? 'thinking' : 'idle'} />
+            <span className="leading-tight">
+              <span className="block text-sm font-semibold">Perlo</span>
+              <span className="block text-[10px] uppercase tracking-wider text-ats-gray">
+                Conseiller · IA locale
+              </span>
+            </span>
             <button
               type="button"
               onClick={() => setOpen(false)}
@@ -214,10 +220,14 @@ export default function Advisor() {
           <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4 text-sm">
             {messages.length === 0 && (
               <div className="space-y-3">
-                <p className="text-xs leading-relaxed text-ats-muted">
-                  Pose une question sur tes métriques, ta récupération ou le
-                  fonctionnement de Trena. Je m&apos;appuie sur tes données du jour.
-                </p>
+                <div className="flex items-end gap-3">
+                  <Mascot mood="wave" size={64} className="shrink-0" />
+                  <p className="pb-2 text-xs leading-relaxed text-ats-muted">
+                    <span className="block font-semibold text-ats-text">Salut, moi c&apos;est Perlo !</span>
+                    Pose-moi une question sur tes métriques, ta récupération ou
+                    Trena. Je m&apos;appuie sur tes données du jour.
+                  </p>
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {SUGGESTIONS.map((s) => (
                     <button
@@ -239,7 +249,13 @@ export default function Advisor() {
                   {m.text}
                 </div>
               ) : (
-                <div key={i} className="max-w-[92%] space-y-1.5 rounded-2xl rounded-bl-md bg-ats-card2 px-3.5 py-2.5 leading-relaxed text-ats-muted">
+                <div key={i} className="flex items-end gap-2">
+                <MascotAvatar
+                  size={26}
+                  mood={m.pending && !m.text ? 'thinking' : 'idle'}
+                  className="mb-0.5"
+                />
+                <div className="max-w-[88%] space-y-1.5 rounded-2xl rounded-bl-md bg-ats-card2 px-3.5 py-2.5 leading-relaxed text-ats-muted">
                   {m.mode && MODE_LABEL[m.mode] && (
                     <p className="text-[10px] font-medium uppercase tracking-wider text-ats-orange">
                       {MODE_LABEL[m.mode]}
@@ -247,10 +263,7 @@ export default function Advisor() {
                   )}
                   {m.text && <RichText text={m.text} />}
                   {m.pending && !m.text && (
-                    <p className="flex items-center gap-2 text-xs text-ats-gray">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Analyse de tes données…
-                    </p>
+                    <p className="text-xs text-ats-gray">Perlo analyse tes données…</p>
                   )}
                   {m.error && <p className="text-xs text-ats-red">{m.error}</p>}
                   {!m.pending && m.sources && m.sources.length > 0 && (
@@ -258,6 +271,7 @@ export default function Advisor() {
                       Réf. : {m.sources.map((s) => s.term).join(' · ')}
                     </p>
                   )}
+                </div>
                 </div>
               )
             )}

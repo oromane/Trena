@@ -1,6 +1,10 @@
 /**
- * Logo Trena — montagne (relief), route (ligne verticale), trajectoire (courbe).
- * Monochrome via currentColor ; l'accent (trajectoire) hérite ou se force.
+ * Logo Trena : une chaîne de montagnes dont le sommet principal est un
+ * battement de cœur. Le terrain (trail, relief) et la physiologie (pouls,
+ * HRV) en un seul signe.
+ *
+ * Tracé principal en currentColor (s'adapte au thème), montagne d'arrière-plan
+ * en accent vert. Lisible jusqu'à 16 px.
  */
 export function LogoMark({ size = 28, accent = '#2E8B57' }: { size?: number; accent?: string }) {
   return (
@@ -11,29 +15,23 @@ export function LogoMark({ size = 28, accent = '#2E8B57' }: { size?: number; acc
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       aria-label="Trena"
+      role="img"
     >
-      {/* A — montagne */}
+      {/* Montagne d'arrière-plan */}
       <path
-        d="M4 24 L12 8 L17 17"
-        stroke="currentColor"
-        strokeWidth="2.4"
+        d="M3 24 L12 11 L16 16.5"
+        stroke={accent}
+        strokeWidth="2.6"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {/* T — la route : verticale descendant du sommet */}
+      {/* Pouls : ligne de base, petite onde, pic-sommet, retour au calme */}
       <path
-        d="M12 8 L12 28"
+        d="M3 24 H9 L11.5 20 L14 26 L20 6 L25 24 H29"
         stroke="currentColor"
-        strokeWidth="2.4"
+        strokeWidth="2.6"
         strokeLinecap="round"
-        opacity="0.45"
-      />
-      {/* S — la trajectoire */}
-      <path
-        d="M28 9 C21 9 21 15.5 25 17 C29 18.5 29 25 21 25"
-        stroke={accent}
-        strokeWidth="2.4"
-        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -41,11 +39,11 @@ export function LogoMark({ size = 28, accent = '#2E8B57' }: { size?: number; acc
 
 export default function Logo({ withText = true }: { withText?: boolean }) {
   return (
-    <span className="inline-flex items-center gap-2.5 text-ats-text">
+    <span className="inline-flex items-center gap-2 text-ats-text">
       <LogoMark />
       {withText && (
-        <span className="text-sm font-bold tracking-[0.18em] text-ats-text">
-          TRENA
+        <span className="text-[17px] font-extrabold lowercase leading-none tracking-tight text-ats-text">
+          trena
         </span>
       )}
     </span>

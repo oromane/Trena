@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Activity, LineChart, ShieldCheck } from 'lucide-react';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
 import { LogoMark } from '@/components/Logo';
+import Mascot from '@/components/brand/Mascot';
 import Spinner from '@/components/Spinner';
 
 export default function LoginPage() {
@@ -56,6 +57,7 @@ export default function LoginPage() {
         </div>
 
         <div className="relative">
+          <Mascot mood="wave" size={92} className="mb-6" />
           <h1 className="max-w-md text-3xl font-bold leading-tight text-ats-text">
             Votre physiologie change chaque nuit. Votre plan aussi.
           </h1>
