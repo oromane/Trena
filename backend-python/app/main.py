@@ -9,6 +9,7 @@ from .logging_setup import setup_logging
 from .engine import banister, hrv, planner, trimp
 
 setup_logging()
+from .routers import advisor as advisor_router
 from .routers import dashboard as dashboard_router
 from .routers import disciplines as disciplines_router
 from .routers import garmin as garmin_router
@@ -30,6 +31,7 @@ app = FastAPI(
 )
 
 app.include_router(ingest_router.router)
+app.include_router(advisor_router.router)
 app.include_router(dashboard_router.router)
 app.include_router(garmin_router.router)
 app.include_router(strength_router.router)

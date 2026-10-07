@@ -8,6 +8,7 @@
 import Link from 'next/link';
 import { Flame, Watch } from 'lucide-react';
 import type { DashboardOverview } from '@/lib/engine';
+import AskButton from '@/components/advisor/AskButton';
 
 const STATE: Record<string, { label: string; sub: string; color: string }> = {
   NORMAL: { label: 'Excellent', sub: 'Récupération au rendez-vous', color: '#2E8B57' },
@@ -82,6 +83,11 @@ export default function HomeHero({
         <p className="mt-3 max-w-xl text-xs leading-relaxed text-ats-muted">
           {data.readiness.detail}
         </p>
+        <AskButton
+          question="Explique-moi mon état de récupération du jour et ce que je peux faire aujourd'hui."
+          label="Pourquoi ?"
+          className="mt-2"
+        />
       </div>
     </section>
   );

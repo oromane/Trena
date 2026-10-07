@@ -123,6 +123,29 @@ le cron matinal.
 3. Test manuel : exécute une fois, la réponse doit contenir `revision`, `pushed`,
    `retracted`. Prérequis : compte Garmin lié (`/garmin/link`) et migration-011 jouée.
 
+## 6.3 Conseiller IA local (Ollama)
+
+Le service `llm` (Ollama) tourne sur le réseau Docker interne, sans port publié :
+seul `performance-engine` l'interroge, et le frontend passe par `/api/advisor`
+(session Supabase obligatoire). Aucune donnée ne quitte le VPS.
+
+- Modèle par défaut : `qwen3:4b` (licence Apache 2.0, ~2,6 Go sur disque,
+  ~3 Go en RAM). Plafonné à 4 Go et 3 cœurs dans le compose.
+- Premier démarrage : `llm-init` télécharge le modèle puis s'arrête. Suivi :
+  `docker compose -f docker-compose.prod.yml logs -f llm-init`
+- Vérifier : `docker compose -f docker-compose.prod.yml exec llm ollama list`
+- Latence attendue sur CPU : premiers mots en quelques secondes (modèle chargé),
+  réponse complète en 20 à 40 s. Le premier appel après 10 min d'inactivité
+  recharge le modèle (+5 à 10 s).
+- Si le modèle est absent ou lent, le conseiller bascule sur le glossaire
+  intégré : l'interface affiche « Définition de référence (IA indisponible) ».
+- Changer de modèle : `LLM_MODEL=...` dans `.env`, puis
+  `docker compose -f docker-compose.prod.yml up -d llm-init performance-engine`.
+- Mesurer le débit réel :
+  `docker compose -f docker-compose.prod.yml exec llm ollama run qwen3:4b --verbose "Explique le HRV en 3 phrases."`
+  (ligne `eval rate` en tokens/s ; sous 4 tokens/s, passer à `qwen3:1.7b`).
+- En local, le service est optionnel : `docker compose --profile ai up`.
+
 ## 7. Éteindre l'ancien hébergement PC
 
 - Ne lance plus `Trena-tunnel.bat` (l'ancien tunnel local est remplacé).

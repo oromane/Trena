@@ -32,6 +32,8 @@ services:
       - TOKEN_ENCRYPTION_KEY=${TOKEN_ENCRYPTION_KEY}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - LLM_BASE_URL=http://llm:11434
+      - LLM_MODEL=${LLM_MODEL:-qwen3:4b}
     restart: always
     networks:
       - app-network
@@ -52,8 +54,46 @@ services:
     networks:
       - app-network
 
+  # Conseiller IA local. Aucun port publié : seul le moteur l'interroge.
+  # Budget VPS 8 Go / 4 vCPU : qwen3:4b quantifié ~3 Go en charge, plafonné
+  # à 4 Go et 3 cœurs pour laisser respirer frontend, moteur et n8n.
+  llm:
+    image: ollama/ollama:latest
+    environment:
+      - OLLAMA_NUM_PARALLEL=1
+      - OLLAMA_MAX_LOADED_MODELS=1
+      - OLLAMA_KEEP_ALIVE=10m
+    volumes:
+      - ollama_data:/root/.ollama
+    mem_limit: 4g
+    cpus: 3
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    restart: always
+    networks:
+      - app-network
+    profiles: ["ai"]   # docker compose --profile ai up
+
+  # Télécharge le modèle au premier démarrage (idempotent, puis s'arrête).
+  llm-init:
+    image: ollama/ollama:latest
+    entrypoint: ["ollama", "pull", "${LLM_MODEL:-qwen3:4b}"]
+    environment:
+      - OLLAMA_HOST=http://llm:11434
+    depends_on:
+      llm:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - app-network
+    profiles: ["ai"]   # docker compose --profile ai up
+
 volumes:
   n8n_data:
+  ollama_data:
 
 networks:
   app-network:
