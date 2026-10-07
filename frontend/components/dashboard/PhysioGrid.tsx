@@ -4,6 +4,7 @@
 import { Activity, HeartPulse, Moon, Zap } from 'lucide-react';
 import type { DashboardOverview, MetricBlock } from '@/lib/engine';
 import InfoTooltip from '@/components/InfoTooltip';
+import AskButton from '@/components/advisor/AskButton';
 
 type Def = {
   key: keyof DashboardOverview['physio'];
@@ -13,6 +14,7 @@ type Def = {
   higherIsBetter: boolean;
   explain: string;
   impact: string;
+  question: string;
   calc: string;
   interpret: (value: number | null, block: MetricBlock) => string;
   format?: (v: number) => string;
@@ -21,6 +23,7 @@ type Def = {
 const DEFS: Def[] = [
   {
     key: 'hrv',
+    question: "Que dit mon HRV d'aujourd'hui sur ma récupération ?",
     label: 'HRV',
     unit: 'ms',
     icon: Activity,
@@ -37,6 +40,7 @@ const DEFS: Def[] = [
   },
   {
     key: 'sleep',
+    question: "Mon sommeil récent est-il suffisant pour m'entraîner ?",
     label: 'Sommeil',
     unit: 'h',
     icon: Moon,
@@ -56,6 +60,7 @@ const DEFS: Def[] = [
   },
   {
     key: 'resting_hr',
+    question: "Ma fréquence cardiaque de repos est-elle normale aujourd'hui ?",
     label: 'FC repos',
     unit: 'bpm',
     icon: HeartPulse,
@@ -72,6 +77,7 @@ const DEFS: Def[] = [
   },
   {
     key: 'stress',
+    question: "Comment interpréter mon score de stress du jour ?",
     label: 'Stress',
     unit: '',
     icon: Zap,
@@ -150,6 +156,7 @@ export default function PhysioGrid({ physio }: { physio: DashboardOverview['phys
             )}
             <p className="mt-3 text-[11px] leading-relaxed text-ats-muted">{d.explain}</p>
             <p className="mt-1.5 text-[11px] leading-relaxed text-ats-gray">{d.impact}</p>
+            <AskButton question={d.question} className="mt-3" />
           </div>
         );
       })}

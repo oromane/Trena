@@ -28,6 +28,13 @@ class Settings(BaseSettings):
     hrv_critical_z: float = -1.5     # en-dessous + déficit sommeil : réduction
     sleep_deficit_minutes: int = 60  # déficit vs baseline déclencheur
 
+    # Conseiller IA local (Ollama, réseau Docker interne uniquement)
+    llm_base_url: str = "http://llm:11434"
+    llm_model: str = "qwen3:4b"
+    llm_timeout_s: float = 90.0
+    llm_max_tokens: int = 350
+    advisor_max_per_hour: int = 20   # par utilisateur
+
     class Config:
         env_file = ".env"
         extra = "ignore"

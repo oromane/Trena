@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { signOut } from '@/app/actions';
 import Logo from '@/components/Logo';
 import ThemeToggle from '@/components/ThemeToggle';
+import Advisor from '@/components/advisor/Advisor';
 
 const LINKS = [
   { href: '/dashboard', label: 'Dashboard' },
@@ -13,6 +14,7 @@ const LINKS = [
 
 export default function Nav() {
   return (
+    <>
     <nav
       className="sticky top-0 z-40 border-b border-white/5 bg-ats-bg/80 backdrop-blur-xl"
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
@@ -43,5 +45,9 @@ export default function Nav() {
         </div>
       </div>
     </nav>
+    {/* Hors du <nav> : son backdrop-blur piégerait le positionnement fixed.
+        Nav n'est rendu que sur les pages authentifiées : le conseiller aussi. */}
+    <Advisor />
+    </>
   );
 }
